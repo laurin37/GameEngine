@@ -20,7 +20,8 @@ public:
 		DirectX::XMFLOAT4 color,
 		float specIntensity,
 		float specPower,
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureSRV = nullptr
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureSRV = nullptr,
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalSRV = nullptr
 	);
 	~Material() = default;
 
@@ -29,4 +30,5 @@ public:
 private:
 	CBuffer_PS_Material m_data;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_textureSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_normalSRV;
 };

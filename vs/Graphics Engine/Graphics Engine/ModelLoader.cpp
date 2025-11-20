@@ -1,3 +1,4 @@
+#include "EnginePCH.h"
 #include "ModelLoader.h"
 #include "Mesh.h"
 #include <fstream>
@@ -134,6 +135,53 @@ std::unique_ptr<Mesh> ModelLoader::Load(ID3D11Device* device, const std::string&
             }
         }
     }
+
+    // --- Tangent Calculation ---
+    // We need to calculate tangents for normal mapping.
+    // We'll do this after all vertices and indices are loaded.
+    for (size_t i = 0; i < finalIndices.size(); i += 3)
+    {
+        // Get the vertices of the triangle
+        Vertex& v0 = finalVertices[finalIndices[i]];
+        Vertex& v1 = finalVertices[finalIndices[i + 1]];
+        Vertex& v2 = finalVertices[finalIndices[i + 2]];
+
+        // Get the edges of the triangle
+        DirectX::XMFLOAT3 edge1(v1.pos.x - v0.pos.x, v1.pos.y - v0.pos.y, v1.pos.z - v0.pos.z);
+        DirectX::XMFLOAT3 edge2(v2.pos.x - v0.pos.x, v2.pos.y - v0.pos.y, v2.pos.z - v0.pos.z);
+
+        // Get the delta UVs
+        DirectX::XMFLOAT2 deltaUV1(v1.uv.x - v0.uv.x, v1.uv.y - v0.uv.y);
+        DirectX::XMFLOAT2 deltaUV2(v2.uv.x - v0.uv.x, v2.uv.y - v0.uv.y);
+
+        // Calculate the tangent
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        DirectX::XMFLOAT3 tangent;
+        tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        // Accumulate the tangent for each vertex
+        v0.tangent.x += tangent.x; v0.tangent.y += tangent.y; v0.tangent.z += tangent.z;
+        v1.tangent.x += tangent.x; v1.tangent.y += tangent.y; v1.tangent.z += tangent.z;
+        v2.tangent.x += tangent.x; v2.tangent.y += tangent.y; v2.tangent.z += tangent.z;
+    }
+
+    // Normalize the tangents
+    for (auto& v : finalVertices)
+    {
+        DirectX::XMVECTOR tangent = DirectX::XMLoadFloat3(&v.tangent);
+        DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&v.normal);
+
+        // Gram-Schmidt orthogonalize and normalize the tangent
+        tangent = DirectX::XMVector3Normalize(
+            DirectX::XMVectorSubtract(tangent, DirectX::XMVectorMultiply(normal, DirectX::XMVector3Dot(normal, tangent)))
+        );
+        
+        DirectX::XMStoreFloat3(&v.tangent, tangent);
+    }
+
 
     std::string debug_msg = "Loaded model: " + filePath + ", Vertices: " + std::to_string(finalVertices.size()) + ", Indices: " + std::to_string(finalIndices.size()) + "\n";
     OutputDebugStringA(debug_msg.c_str());

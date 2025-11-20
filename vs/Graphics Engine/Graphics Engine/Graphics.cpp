@@ -1,3 +1,4 @@
+#include "EnginePCH.h"
 #include "Graphics.h"
 #include "GameObject.h"
 #include "Camera.h"
@@ -30,11 +31,12 @@ const char* vertexShaderSource = R"(
         matrix projectionMatrix;
         matrix lightViewProjMatrix;
     }
-    struct VS_INPUT { float3 pos : POSITION; float2 uv : TEXCOORD; float3 normal : NORMAL; };
+    struct VS_INPUT { float3 pos : POSITION; float2 uv : TEXCOORD; float3 normal : NORMAL; float3 tangent : TANGENT; };
     struct PS_INPUT { 
         float4 pos : SV_POSITION; 
         float2 uv : TEXCOORD; 
         float3 normal : NORMAL; 
+        float3 tangent : TANGENT;
         float3 worldPos : WORLD_POS;
         float4 lightSpacePos : TEXCOORD1;
     };
@@ -49,6 +51,7 @@ const char* vertexShaderSource = R"(
         output.pos = mul(output.pos, projectionMatrix);
         
         output.normal = normalize(mul(input.normal, (float3x3)worldMatrix));
+        output.tangent = normalize(mul(input.tangent, (float3x3)worldMatrix));
         output.uv = input.uv;
         output.lightSpacePos = mul(worldPos, lightViewProjMatrix);
         return output;
@@ -57,16 +60,12 @@ const char* vertexShaderSource = R"(
 
 const char* pixelShaderSource = R"(
     Texture2D g_texture : register(t0);
-    Texture2D g_shadowMap : register(t1);
-    SamplerState g_sampler : register(s0);
-    SamplerComparisonState g_shadowSampler : register(s1);
+    Texture2D g_normalMap : register(t1);
+    Texture2D g_shadowMap : register(t2);
 
-    // --- C++ Structs (for reference) ---
-    /*
-    struct DirectionalLight { float4 direction; float4 color; };
-    struct PointLight { float4 position; float4 color; float4 attenuation; };
-    struct CB_PS_Frame { DirectionalLight dirLight; PointLight pointLights[4]; float4 cameraPos; };
-    */
+    SamplerState g_sampler : register(s0);
+    SamplerComparisonState g_shadowSampler : register(s2);
+
 
     cbuffer FrameData : register(b0)
     {
@@ -94,20 +93,21 @@ const char* pixelShaderSource = R"(
         float4 pos : SV_POSITION; 
         float2 uv : TEXCOORD; 
         float3 normal : NORMAL; 
+        float3 tangent : TANGENT;
         float3 worldPos : WORLD_POS;
         float4 lightSpacePos : TEXCOORD1;
     };
 
     // --- Helper Function ---
-    float3 CalcLighting(float3 litColor, float3 normal, float3 lightVec, float3 lightColor, float3 viewDir, float specIntensity, float specPower)
+    float3 CalcLighting(float3 litColor, float3 pixelNormal, float3 lightVec, float3 lightColor, float3 viewDir, float specIntensity, float specPower)
     {
         // Diffuse
-        float diffuseFactor = saturate(dot(normal, lightVec));
+        float diffuseFactor = saturate(dot(pixelNormal, lightVec));
         float3 diffuse = litColor * diffuseFactor * lightColor;
 
         // Specular (Blinn-Phong)
         float3 halfVector = normalize(lightVec + viewDir);
-        float specFactor = pow(saturate(dot(normal, halfVector)), specPower);
+        float specFactor = pow(saturate(dot(pixelNormal, halfVector)), specPower);
         float3 specular = specIntensity * specFactor * lightColor;
 
         return diffuse + specular;
@@ -116,6 +116,17 @@ const char* pixelShaderSource = R"(
 
     float4 main(PS_INPUT input) : SV_TARGET
     {
+        // --- Normal Mapping ---
+        float3 N = normalize(input.normal);
+        float3 T = normalize(input.tangent - dot(input.tangent, N) * N);
+        float3 B = cross(N, T);
+        float3x3 TBN = float3x3(T, B, N);
+        
+        float3 normalMapSample = g_normalMap.Sample(g_sampler, input.uv).rgb;
+        float3 tangentSpaceNormal = normalize(normalMapSample * 2.0 - 1.0);
+        float3 pixelNormal = normalize(mul(tangentSpaceNormal, TBN));
+
+
         float4 texColor = g_texture.Sample(g_sampler, input.uv);
         float3 baseColor = texColor.rgb * surfaceColor.rgb;
         
@@ -130,8 +141,10 @@ const char* pixelShaderSource = R"(
 
         if (saturate(projCoords.z) > 0.0 && saturate(projCoords.x) > 0.0 && saturate(projCoords.x) < 1.0 && saturate(projCoords.y) > 0.0 && saturate(projCoords.y) < 1.0)
         {
+            [unroll]
             for (int x = -1; x <= 1; ++x)
             {
+                [unroll]
                 for (int y = -1; y <= 1; ++y)
                 {
                     shadowFactor += g_shadowMap.SampleCmpLevelZero(g_shadowSampler, projCoords.xy + float2(x, y) * texelSize, projCoords.z - shadowBias);
@@ -152,7 +165,7 @@ const char* pixelShaderSource = R"(
         finalColor += baseColor * 0.15f;
 
         // 2. Directional Light (with shadows)
-        float3 dirLightContrib = CalcLighting(baseColor, input.normal, -dirLightDirection.xyz, dirLightColor.rgb * dirLightColor.a, viewDir, specularIntensity, specularPower);
+        float3 dirLightContrib = CalcLighting(baseColor, pixelNormal, -dirLightDirection.xyz, dirLightColor.rgb * dirLightColor.a, viewDir, specularIntensity, specularPower);
         finalColor += dirLightContrib * shadowFactor;
 
         // 3. Point Lights
@@ -167,7 +180,7 @@ const char* pixelShaderSource = R"(
             {
                 lightVec = normalize(lightVec);
 
-                float3 pointLightContrib = CalcLighting(baseColor, input.normal, lightVec, pointLightColor[i].rgb * pointLightColor[i].a, viewDir, specularIntensity, specularPower);
+                float3 pointLightContrib = CalcLighting(baseColor, pixelNormal, lightVec, pointLightColor[i].rgb * pointLightColor[i].a, viewDir, specularIntensity, specularPower);
                 
                 // Attenuation
                 float att = 1.0 / (pointLightAtt[i].x + pointLightAtt[i].y * dist + pointLightAtt[i].z * dist * dist);
@@ -240,6 +253,7 @@ void Graphics::InitPipeline()
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     ThrowIfFailed(m_device->CreateInputLayout(inputLayoutDesc, ARRAYSIZE(inputLayoutDesc), vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &m_inputLayout));
 
@@ -453,9 +467,9 @@ void Graphics::RenderMainPass(
 
     m_deviceContext->PSSetConstantBuffers(0, 1, m_psFrameConstantBuffer.GetAddressOf());
     m_deviceContext->PSSetShaderResources(0, 1, m_textureView.GetAddressOf());
-    m_deviceContext->PSSetShaderResources(1, 1, m_shadowSRV.GetAddressOf());
+    m_deviceContext->PSSetShaderResources(2, 1, m_shadowSRV.GetAddressOf()); // Slot 2 now
     m_deviceContext->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
-    m_deviceContext->PSSetSamplers(1, 1, m_shadowSampler.GetAddressOf());
+    m_deviceContext->PSSetSamplers(2, 1, m_shadowSampler.GetAddressOf());   // Slot 2 now
 
     m_deviceContext->IASetInputLayout(m_inputLayout.Get());
     m_deviceContext->VSSetShader(m_vertexShader.Get(), nullptr, 0);
