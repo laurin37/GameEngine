@@ -1,15 +1,17 @@
 #pragma once
 
+#include "EnginePCH.h"
 #include <d3d11.h>
 #include <wrl/client.h>
-#include <stdexcept>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <memory>
 #include <vector>
-#include "Mesh.h"
-#include "Camera.h"
-#include "GameObject.h"
+
+// Forward Declarations
+class Mesh;
+class Camera;
+class GameObject;
 
 // Constant buffer for vertex shader
 struct CB_VS_vertexshader
@@ -27,7 +29,7 @@ struct CB_PS_light
     DirectX::XMFLOAT4 cameraPos;
     float specularIntensity;
     float specularPower;
-    float padding[2]; // Pad to a 16-byte boundary
+    float padding[2];
 };
 
 class Graphics
@@ -38,12 +40,11 @@ public:
 
     Graphics(const Graphics&) = delete;
     Graphics& operator=(const Graphics&) = delete;
-    Graphics(Graphics&&) = delete;
-    Graphics& operator=(Graphics&&) = delete;
 
     void Initialize(HWND hwnd, int width, int height);
-    void RenderFrame();
-    Camera* GetCamera();
+    void RenderFrame(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& gameObjects);
+    
+    Mesh* GetMeshAsset() const;
 
 private:
     void InitPipeline();
@@ -69,10 +70,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_textureView;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState;
     
-    // Scene objects
+    // Scene Assets
     std::unique_ptr<Mesh> m_meshAsset;
-    std::vector<std::unique_ptr<GameObject>> m_gameObjects;
-    std::unique_ptr<Camera> m_camera;
 
     // Matrices
     DirectX::XMMATRIX m_projectionMatrix;

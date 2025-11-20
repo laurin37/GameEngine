@@ -1,4 +1,7 @@
 #include "Graphics.h"
+#include "GameObject.h"
+#include "Camera.h"
+#include "Mesh.h"
 #include <vector>
 #include <string>
 
@@ -13,34 +16,18 @@ const char* vertexShaderSource = R"(
         matrix viewMatrix;
         matrix projectionMatrix;
     }
-
-    struct VS_INPUT
-    {
-        float3 pos : POSITION;
-        float2 uv : TEXCOORD;
-        float3 normal : NORMAL;
-    };
-
-    struct PS_INPUT
-    {
-        float4 pos : SV_POSITION;
-        float2 uv : TEXCOORD;
-        float3 normal : NORMAL;
-        float3 worldPos : WORLD_POS;
-    };
+    struct VS_INPUT { float3 pos : POSITION; float2 uv : TEXCOORD; float3 normal : NORMAL; };
+    struct PS_INPUT { float4 pos : SV_POSITION; float2 uv : TEXCOORD; float3 normal : NORMAL; float3 worldPos : WORLD_POS; };
 
     PS_INPUT main(VS_INPUT input)
     {
         PS_INPUT output;
         float4 pos = float4(input.pos, 1.0f);
-        
         output.worldPos = mul(pos, worldMatrix).xyz;
-
         pos = mul(pos, worldMatrix);
         pos = mul(pos, viewMatrix);
         pos = mul(pos, projectionMatrix);
         output.pos = pos;
-        
         output.normal = normalize(mul(input.normal, (float3x3)worldMatrix));
         output.uv = input.uv;
         return output;
@@ -60,13 +47,7 @@ const char* pixelShaderSource = R"(
         float specularPower;
     }
 
-    struct PS_INPUT
-    {
-        float4 pos : SV_POSITION;
-        float2 uv : TEXCOORD;
-        float3 normal : NORMAL;
-        float3 worldPos : WORLD_POS;
-    };
+    struct PS_INPUT { float4 pos : SV_POSITION; float2 uv : TEXCOORD; float3 normal : NORMAL; float3 worldPos : WORLD_POS; };
 
     float4 main(PS_INPUT input) : SV_TARGET
     {
@@ -74,12 +55,10 @@ const char* pixelShaderSource = R"(
         float ambient = 0.1f;
         float diffuse = saturate(dot(input.normal, -lightDir.xyz));
         float3 diffuseColor = texColor.rgb * (diffuse * lightColor.rgb + ambient);
-
         float3 viewDir = normalize(cameraPos.xyz - input.worldPos);
         float3 halfVector = normalize(-lightDir.xyz + viewDir);
         float spec = pow(saturate(dot(input.normal, halfVector)), specularPower);
         float3 specColor = specularIntensity * spec * lightColor.rgb;
-
         float3 finalColor = diffuseColor + specColor;
         return float4(finalColor, texColor.a);
     }
@@ -138,29 +117,9 @@ void Graphics::Initialize(HWND hwnd, int width, int height)
 
     InitPipeline();
 
-    // Initialize camera
-    m_camera = std::make_unique<Camera>();
-    m_camera->SetPosition(0.0f, 1.0f, -5.0f);
-
-    // Setup projection matrix
     m_projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(
         DirectX::XM_PIDIV4, static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f
     );
-
-    // Create GameObjects
-    auto floor = std::make_unique<GameObject>(m_meshAsset.get());
-    floor->SetPosition(0.0f, -2.0f, 0.0f);
-    floor->SetScale(10.0f, 0.1f, 10.0f);
-    m_gameObjects.push_back(std::move(floor));
-
-    auto cube1 = std::make_unique<GameObject>(m_meshAsset.get());
-    cube1->SetPosition(0.0f, 0.0f, 0.0f);
-    m_gameObjects.push_back(std::move(cube1));
-    
-    auto cube2 = std::make_unique<GameObject>(m_meshAsset.get());
-    cube2->SetPosition(2.0f, 0.0f, 2.0f);
-    cube2->SetRotation(DirectX::XM_PIDIV4, DirectX::XM_PIDIV4, 0.0f);
-    m_gameObjects.push_back(std::move(cube2));
 }
 
 void Graphics::InitPipeline()
@@ -182,7 +141,6 @@ void Graphics::InitPipeline()
     if (FAILED(hr)) { if (errorBlob) { throw std::runtime_error(std::string("PS Error: ") + (char*)errorBlob->GetBufferPointer()); } else { ThrowIfFailed(hr); } }
     ThrowIfFailed(m_device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), nullptr, &m_pixelShader));
 
-    // Create the shared mesh asset
     std::vector<Vertex> vertices = {
         { {-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, -1.0f} }, { {-0.5f,  0.5f, -0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} }, { { 0.5f,  0.5f, -0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, -1.0f} }, { { 0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
         { { 0.5f, -0.5f,  0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },  { { 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },  { {-0.5f,  0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },  { {-0.5f, -0.5f,  0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
@@ -194,7 +152,6 @@ void Graphics::InitPipeline()
     std::vector<unsigned int> indices = { 0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23 };
     m_meshAsset = std::make_unique<Mesh>(m_device.Get(), vertices, indices);
 
-    // Create constant buffers
     D3D11_BUFFER_DESC cbd = {};
     cbd.Usage = D3D11_USAGE_DEFAULT;
     cbd.ByteWidth = sizeof(CB_VS_vertexshader);
@@ -204,7 +161,6 @@ void Graphics::InitPipeline()
     cbd.ByteWidth = sizeof(CB_PS_light);
     ThrowIfFailed(m_device->CreateBuffer(&cbd, nullptr, &m_psConstantBuffer));
 
-    // Create texture and sampler
     const int texWidth = 64, texHeight = 64;
     std::vector<uint32_t> texData(texWidth * texHeight);
     for (int y = 0; y < texHeight; ++y) for (int x = 0; x < texWidth; ++x) texData[y * texWidth + x] = ((x / 8 % 2) == (y / 8 % 2)) ? 0xFFFFFFFF : 0xFF000000;
@@ -234,30 +190,27 @@ void Graphics::InitPipeline()
     ThrowIfFailed(m_device->CreateSamplerState(&sampDesc, &m_samplerState));
 }
 
-Camera* Graphics::GetCamera()
+Mesh* Graphics::GetMeshAsset() const
 {
-    return m_camera.get();
+    return m_meshAsset.get();
 }
 
-void Graphics::RenderFrame()
+void Graphics::RenderFrame(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& objects)
 {
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
     m_deviceContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-    // Get view matrix from camera
-    DirectX::XMMATRIX viewMatrix = m_camera->GetViewMatrix();
+    DirectX::XMMATRIX viewMatrix = camera->GetViewMatrix();
 
-    // Update PS constant buffer (light and camera pos) - this is constant for all objects in the scene
     CB_PS_light ps_cb;
     DirectX::XMStoreFloat4(&ps_cb.lightDir, DirectX::XMVector3Normalize(DirectX::XMVectorSet(0.5f, -0.5f, 1.0f, 0.0f)));
     ps_cb.lightColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-    DirectX::XMStoreFloat4(&ps_cb.cameraPos, m_camera->GetPosition());
+    DirectX::XMStoreFloat4(&ps_cb.cameraPos, camera->GetPosition());
     ps_cb.specularIntensity = 1.0f;
     ps_cb.specularPower = 32.0f;
     m_deviceContext->UpdateSubresource(m_psConstantBuffer.Get(), 0, nullptr, &ps_cb, 0, 0);
 
-    // Bind common pipeline state
     m_deviceContext->PSSetConstantBuffers(0, 1, m_psConstantBuffer.GetAddressOf());
     m_deviceContext->PSSetShaderResources(0, 1, m_textureView.GetAddressOf());
     m_deviceContext->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
@@ -266,13 +219,10 @@ void Graphics::RenderFrame()
     m_deviceContext->PSSetShader(m_pixelShader.Get(), nullptr, 0);
     m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // Draw all game objects
-    for (const auto& pGameObject : m_gameObjects)
+    for (const auto& pGameObject : objects)
     {
-        // Get world matrix from the game object
         DirectX::XMMATRIX worldMatrix = pGameObject->GetWorldMatrix();
 
-        // Update VS constant buffer with matrices for this specific object
         CB_VS_vertexshader vs_cb;
         DirectX::XMStoreFloat4x4(&vs_cb.worldMatrix, DirectX::XMMatrixTranspose(worldMatrix));
         DirectX::XMStoreFloat4x4(&vs_cb.viewMatrix, DirectX::XMMatrixTranspose(viewMatrix));
@@ -281,10 +231,8 @@ void Graphics::RenderFrame()
         
         m_deviceContext->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());
 
-        // Draw the object's mesh
         pGameObject->Draw(m_deviceContext.Get());
     }
 
-    // Present the frame
     ThrowIfFailed(m_swapChain->Present(1, 0));
 }
