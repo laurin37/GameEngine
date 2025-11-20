@@ -75,7 +75,6 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         }
         catch (...) {
             // FALLBACK: If font.png isn't found, use wood texture so we see SOMETHING.
-            // This confirms the pipeline works but the asset is missing.
             m_font.Initialize(texWood);
         }
 
@@ -209,12 +208,17 @@ void Game::Update(float deltaTime)
 
 void Game::Render()
 {
+    // 1. Render 3D Scene (Shadows + Main Pass)
     m_graphics.RenderFrame(m_camera.get(), m_gameObjects, m_dirLight, m_pointLights);
 
+    // 2. Render UI (Overlay) on top of 3D
     m_graphics.EnableUIState();
 
     float color[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
     m_font.DrawString(m_graphics, "FPS: " + std::to_string(m_fps), 10.0f, 10.0f, 30.0f, color);
 
     m_graphics.DisableUIState();
+
+    // 3. Present EVERYTHING (Swap Buffers)
+    m_graphics.Present();
 }

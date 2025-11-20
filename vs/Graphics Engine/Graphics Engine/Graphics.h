@@ -72,12 +72,17 @@ public:
     Graphics& operator=(const Graphics&) = delete;
 
     void Initialize(HWND hwnd, int width, int height);
+
+    // Changed: RenderFrame no longer presents automatically
     void RenderFrame(
         Camera* camera,
         const std::vector<std::unique_ptr<GameObject>>& gameObjects,
         const DirectionalLight& dirLight,
         const std::vector<PointLight>& pointLights
     );
+
+    // New: Call this at the very end of your loop
+    void Present();
 
     // --- UI Methods ---
     void EnableUIState();
@@ -137,7 +142,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_uiConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11BlendState> m_uiBlendState;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_uiDepthStencilState;
-    Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_uiRS; // <--- ADDED THIS
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_uiRS;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> m_uiInputLayout;
     float m_screenWidth;
     float m_screenHeight;

@@ -40,7 +40,9 @@ const char* uiVertexShaderSource = R"(
         // Convert Screen Pixels to NDC (-1 to 1)
         output.pos.x = (input.pos.x / screenSize.x) * 2.0 - 1.0;
         output.pos.y = -((input.pos.y / screenSize.y) * 2.0 - 1.0);
-        output.pos.z = 0.0;
+        
+        // FIX: Set Z to 0.1 instead of 0.0 to avoid Near-Plane clipping
+        output.pos.z = 0.1; 
         output.pos.w = 1.0;
 
         output.uv = input.uv;
@@ -63,8 +65,10 @@ const char* uiPixelShaderSource = R"(
     float4 main(PS_INPUT input) : SV_TARGET
     {
         float4 texColor = g_texture.Sample(g_sampler, input.uv);
-        // If you don't have a real font texture yet, this keeps it visible (removes alpha check)
-        if (texColor.a == 0.0) discard; 
+        
+        // DEBUG: If texture alpha is missing, draw RED block so we see SOMETHING.
+        if (texColor.a < 0.1) return float4(1, 0, 0, 0.5) * input.color; 
+        
         return texColor * input.color;
     }
 )";
@@ -463,7 +467,7 @@ void Graphics::InitPipeline()
     D3D11_DEPTH_STENCIL_DESC dsDesc = {};
     dsDesc.DepthEnable = FALSE;
     dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    dsDesc.DepthFunc = D3D11_COMPARISON_ALWAYS; // Changed to ALWAYS
+    dsDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
     ThrowIfFailed(m_device->CreateDepthStencilState(&dsDesc, &m_uiDepthStencilState));
 
     // --- 9. UI Rasterizer State (No Culling) ---
@@ -499,6 +503,13 @@ void Graphics::RenderFrame(
     DirectX::XMMATRIX lightView, lightProj;
     RenderShadowPass(gameObjects, lightView, lightProj);
     RenderMainPass(camera, gameObjects, lightView * lightProj, dirLight, pointLights);
+
+    // Removed: ThrowIfFailed(m_swapChain->Present(1, 0)); 
+    // Presentation is now manual via Present()
+}
+
+void Graphics::Present()
+{
     ThrowIfFailed(m_swapChain->Present(1, 0));
 }
 
