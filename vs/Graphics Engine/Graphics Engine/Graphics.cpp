@@ -10,6 +10,71 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
+// --- SHADER SOURCES ---
+
+const char* uiVertexShaderSource = R"(
+    cbuffer ConstantBuffer : register(b0)
+    {
+        float2 screenSize;
+        float2 padding;
+    }
+
+    struct VS_INPUT
+    {
+        float3 pos : POSITION;
+        float2 uv : TEXCOORD;
+        float4 color : COLOR;
+    };
+
+    struct PS_INPUT
+    {
+        float4 pos : SV_POSITION;
+        float2 uv : TEXCOORD;
+        float4 color : COLOR;
+    };
+
+    PS_INPUT main(VS_INPUT input)
+    {
+        PS_INPUT output;
+        
+        // Convert Screen Pixels to NDC (-1 to 1)
+        // x: (x / width) * 2 - 1
+        // y: -((y / height) * 2 - 1)  <-- Flip Y
+        
+        output.pos.x = (input.pos.x / screenSize.x) * 2.0 - 1.0;
+        output.pos.y = -((input.pos.y / screenSize.y) * 2.0 - 1.0);
+        output.pos.z = 0.0;
+        output.pos.w = 1.0;
+
+        output.uv = input.uv;
+        output.color = input.color;
+        return output;
+    }
+)";
+
+const char* uiPixelShaderSource = R"(
+    Texture2D g_texture : register(t0);
+    SamplerState g_sampler : register(s0);
+
+    struct PS_INPUT
+    {
+        float4 pos : SV_POSITION;
+        float2 uv : TEXCOORD;
+        float4 color : COLOR;
+    };
+
+    float4 main(PS_INPUT input) : SV_TARGET
+    {
+        // Sample font texture (alpha/grayscale mostly)
+        float4 texColor = g_texture.Sample(g_sampler, input.uv);
+        
+        // Multiply by vertex color (allows changing text color)
+        // Assume texture is white with alpha, or use channel R for alpha if it's a mask
+        // Standard simple implementation:
+        return texColor * input.color;
+    }
+)";
+
 const char* shadowVertexShaderSource = R"(
     cbuffer LightMatrixBuffer : register(b0)
     {
@@ -151,9 +216,6 @@ const char* pixelShaderSource = R"(
              pixelNormal = normalize(mul(tangentSpaceNormal, TBN));
         }
 
-        // VISUAL DEBUG: Uncomment to see the normals directly
-        // return float4(pixelNormal * 0.5 + 0.5, 1.0);
-
         float4 texColor = g_texture.Sample(g_sampler, input.uv);
         float3 baseColor = texColor.rgb * surfaceColor.rgb;
         
@@ -221,10 +283,15 @@ const char* pixelShaderSource = R"(
 
 Graphics::Graphics()
     : m_projectionMatrix(DirectX::XMMatrixIdentity())
-{}
+    , m_screenWidth(0), m_screenHeight(0)
+{
+}
 
 void Graphics::Initialize(HWND hwnd, int width, int height)
 {
+    m_screenWidth = static_cast<float>(width);
+    m_screenHeight = static_cast<float>(height);
+
     DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferDesc.Width = width;
     sd.BufferDesc.Height = height;
@@ -272,8 +339,9 @@ void Graphics::Initialize(HWND hwnd, int width, int height)
 
 void Graphics::InitPipeline()
 {
-    Microsoft::WRL::ComPtr<ID3DBlob> vertexShaderBlob, pixelShaderBlob, errorBlob, shadowVSBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> vertexShaderBlob, pixelShaderBlob, errorBlob, shadowVSBlob, uiVSBlob, uiPSBlob;
 
+    // --- 1. Main Shaders ---
     HRESULT hr = D3DCompile(vertexShaderSource, strlen(vertexShaderSource), "VertexShader", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vertexShaderBlob, &errorBlob);
     if (FAILED(hr)) { if (errorBlob) { throw std::runtime_error(std::string("VS Error: ") + (char*)errorBlob->GetBufferPointer()); } else { ThrowIfFailed(hr); } }
     ThrowIfFailed(m_device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), nullptr, &m_vertexShader));
@@ -290,10 +358,29 @@ void Graphics::InitPipeline()
     if (FAILED(hr)) { if (errorBlob) { throw std::runtime_error(std::string("PS Error: ") + (char*)errorBlob->GetBufferPointer()); } else { ThrowIfFailed(hr); } }
     ThrowIfFailed(m_device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), nullptr, &m_pixelShader));
 
+    // --- 2. Shadow Shaders ---
     hr = D3DCompile(shadowVertexShaderSource, strlen(shadowVertexShaderSource), "ShadowVS", nullptr, nullptr, "main", "vs_5_0", 0, 0, &shadowVSBlob, &errorBlob);
     if (FAILED(hr)) { if (errorBlob) { throw std::runtime_error(std::string("Shadow VS Error: ") + (char*)errorBlob->GetBufferPointer()); } else { ThrowIfFailed(hr); } }
     ThrowIfFailed(m_device->CreateVertexShader(shadowVSBlob->GetBufferPointer(), shadowVSBlob->GetBufferSize(), nullptr, &m_shadowVS));
 
+    // --- 3. UI Shaders ---
+    hr = D3DCompile(uiVertexShaderSource, strlen(uiVertexShaderSource), "UIVS", nullptr, nullptr, "main", "vs_5_0", 0, 0, &uiVSBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) { throw std::runtime_error(std::string("UI VS Error: ") + (char*)errorBlob->GetBufferPointer()); } else { ThrowIfFailed(hr); } }
+    ThrowIfFailed(m_device->CreateVertexShader(uiVSBlob->GetBufferPointer(), uiVSBlob->GetBufferSize(), nullptr, &m_uiVS));
+
+    hr = D3DCompile(uiPixelShaderSource, strlen(uiPixelShaderSource), "UIPS", nullptr, nullptr, "main", "ps_5_0", 0, 0, &uiPSBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) { throw std::runtime_error(std::string("UI PS Error: ") + (char*)errorBlob->GetBufferPointer()); } else { ThrowIfFailed(hr); } }
+    ThrowIfFailed(m_device->CreatePixelShader(uiPSBlob->GetBufferPointer(), uiPSBlob->GetBufferSize(), nullptr, &m_uiPS));
+
+    // UI Input Layout
+    D3D11_INPUT_ELEMENT_DESC uiInputDesc[] = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+    ThrowIfFailed(m_device->CreateInputLayout(uiInputDesc, ARRAYSIZE(uiInputDesc), uiVSBlob->GetBufferPointer(), uiVSBlob->GetBufferSize(), &m_uiInputLayout));
+
+    // --- 4. Constant Buffers ---
     D3D11_BUFFER_DESC cbd = {};
     cbd.Usage = D3D11_USAGE_DEFAULT;
     cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -310,6 +397,19 @@ void Graphics::InitPipeline()
     cbd.ByteWidth = sizeof(DirectX::XMMATRIX);
     ThrowIfFailed(m_device->CreateBuffer(&cbd, nullptr, &m_cbShadowMatrix));
 
+    // UI Constant Buffer
+    cbd.ByteWidth = sizeof(CB_VS_UI);
+    ThrowIfFailed(m_device->CreateBuffer(&cbd, nullptr, &m_uiConstantBuffer));
+
+    // --- 5. Vertex Buffers (Dynamic for UI) ---
+    D3D11_BUFFER_DESC uiVBD = {};
+    uiVBD.Usage = D3D11_USAGE_DYNAMIC;
+    uiVBD.ByteWidth = sizeof(SpriteVertex) * 256 * 6; // Sufficient for max chars in SimpleFont
+    uiVBD.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    uiVBD.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    ThrowIfFailed(m_device->CreateBuffer(&uiVBD, nullptr, &m_uiVertexBuffer));
+
+    // --- 6. Textures & Samplers ---
     // Create a 1x1 white texture to act as a default for non-textured materials
     const int texWidth = 1, texHeight = 1;
     std::vector<uint32_t> texData(texWidth * texHeight, 0xFFFFFFFF); // 0xFFFFFFFF = white
@@ -339,6 +439,7 @@ void Graphics::InitPipeline()
     sampDesc.MaxAnisotropy = D3D11_MAX_MAXANISOTROPY;
     ThrowIfFailed(m_device->CreateSamplerState(&sampDesc, &m_samplerState));
 
+    // --- 7. Shadow Map ---
     D3D11_TEXTURE2D_DESC shadowMapDesc = {};
     shadowMapDesc.Width = SHADOW_MAP_SIZE;
     shadowMapDesc.Height = SHADOW_MAP_SIZE;
@@ -380,6 +481,24 @@ void Graphics::InitPipeline()
     rsDesc.DepthBias = 10000;
     rsDesc.SlopeScaledDepthBias = 1.0f;
     ThrowIfFailed(m_device->CreateRasterizerState(&rsDesc, &m_shadowRS));
+
+    // --- 8. UI States (Blend & Depth) ---
+    D3D11_BLEND_DESC blendDesc = {};
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    ThrowIfFailed(m_device->CreateBlendState(&blendDesc, &m_uiBlendState));
+
+    D3D11_DEPTH_STENCIL_DESC dsDesc = {};
+    dsDesc.DepthEnable = FALSE; // Disable Depth for UI
+    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+    ThrowIfFailed(m_device->CreateDepthStencilState(&dsDesc, &m_uiDepthStencilState));
 }
 
 ID3D11Device* Graphics::GetDevice() const
@@ -408,6 +527,53 @@ void Graphics::RenderFrame(
     RenderShadowPass(gameObjects, lightView, lightProj);
     RenderMainPass(camera, gameObjects, lightView * lightProj, dirLight, pointLights);
     ThrowIfFailed(m_swapChain->Present(1, 0));
+}
+
+void Graphics::EnableUIState()
+{
+    float blendFactor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    m_deviceContext->OMSetBlendState(m_uiBlendState.Get(), blendFactor, 0xffffffff);
+    m_deviceContext->OMSetDepthStencilState(m_uiDepthStencilState.Get(), 0);
+
+    // Update UI Constant Buffer with current screen size
+    CB_VS_UI cbUI;
+    cbUI.screenSize = DirectX::XMFLOAT2(m_screenWidth, m_screenHeight);
+    cbUI.padding = DirectX::XMFLOAT2(0, 0);
+    m_deviceContext->UpdateSubresource(m_uiConstantBuffer.Get(), 0, nullptr, &cbUI, 0, 0);
+    m_deviceContext->VSSetConstantBuffers(0, 1, m_uiConstantBuffer.GetAddressOf());
+}
+
+void Graphics::DisableUIState()
+{
+    m_deviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+    m_deviceContext->OMSetDepthStencilState(nullptr, 0); // Reset to default
+}
+
+void Graphics::DrawUI(const SpriteVertex* vertices, size_t count, ID3D11ShaderResourceView* texture)
+{
+    if (count == 0) return;
+
+    // Map the dynamic buffer
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    HRESULT hr = m_deviceContext->Map(m_uiVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (FAILED(hr)) return;
+
+    memcpy(mappedResource.pData, vertices, sizeof(SpriteVertex) * count);
+    m_deviceContext->Unmap(m_uiVertexBuffer.Get(), 0);
+
+    // Set Pipeline
+    UINT stride = sizeof(SpriteVertex);
+    UINT offset = 0;
+    m_deviceContext->IASetVertexBuffers(0, 1, m_uiVertexBuffer.GetAddressOf(), &stride, &offset);
+    m_deviceContext->IASetInputLayout(m_uiInputLayout.Get());
+    m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    m_deviceContext->VSSetShader(m_uiVS.Get(), nullptr, 0);
+    m_deviceContext->PSSetShader(m_uiPS.Get(), nullptr, 0);
+    m_deviceContext->PSSetShaderResources(0, 1, &texture);
+    m_deviceContext->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+
+    m_deviceContext->Draw(static_cast<UINT>(count), 0);
 }
 
 void Graphics::RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& gameObjects, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj)

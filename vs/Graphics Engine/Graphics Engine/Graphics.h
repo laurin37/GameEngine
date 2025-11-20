@@ -46,6 +46,20 @@ struct CB_PS_Frame
     DirectX::XMFLOAT4 cameraPos;
 };
 
+// --- UI Structures ---
+struct SpriteVertex
+{
+    DirectX::XMFLOAT3 pos;
+    DirectX::XMFLOAT2 uv;
+    DirectX::XMFLOAT4 color;
+};
+
+struct CB_VS_UI
+{
+    DirectX::XMFLOAT2 screenSize;
+    DirectX::XMFLOAT2 padding;
+};
+
 class Graphics
 {
 public:
@@ -59,12 +73,17 @@ public:
 
     void Initialize(HWND hwnd, int width, int height);
     void RenderFrame(
-        Camera* camera, 
+        Camera* camera,
         const std::vector<std::unique_ptr<GameObject>>& gameObjects,
         const DirectionalLight& dirLight,
         const std::vector<PointLight>& pointLights
     );
-    
+
+    // --- UI Methods ---
+    void EnableUIState();
+    void DisableUIState();
+    void DrawUI(const SpriteVertex* vertices, size_t count, ID3D11ShaderResourceView* texture);
+
     ID3D11Device* GetDevice() const;
     ID3D11DeviceContext* GetContext() const;
     Mesh* GetMeshAsset() const;
@@ -73,8 +92,8 @@ private:
     void InitPipeline();
     void RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& gameObjects, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj);
     void RenderMainPass(
-        Camera* camera, 
-        const std::vector<std::unique_ptr<GameObject>>& gameObjects, 
+        Camera* camera,
+        const std::vector<std::unique_ptr<GameObject>>& gameObjects,
         const DirectX::XMMATRIX& lightViewProj,
         const DirectionalLight& dirLight,
         const std::vector<PointLight>& pointLights
@@ -101,7 +120,7 @@ private:
     // Texturing objects
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_textureView;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState;
-    
+
     // Shadow Mapping objects
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_shadowMapTexture;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_shadowDSV;
@@ -110,6 +129,17 @@ private:
     Microsoft::WRL::ComPtr<ID3D11VertexShader> m_shadowVS;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_cbShadowMatrix;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_shadowRS;
+
+    // UI Objects
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_uiVS;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_uiPS;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_uiVertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_uiConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11BlendState> m_uiBlendState;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_uiDepthStencilState;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_uiInputLayout; // Missing in initial prompt list but required for mapping
+    float m_screenWidth;
+    float m_screenHeight;
 
     // Scene Assets
     std::unique_ptr<Mesh> m_meshAsset;

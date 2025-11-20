@@ -6,7 +6,8 @@
 
 Game::Game()
     : m_dirLight{ {0.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f} }
-{}
+{
+}
 
 bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
 {
@@ -51,7 +52,6 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
 
 
         // 3. Load Basic Assets
-        // Note: We store them in m_meshAssets so they stay alive for the GameObjects to reference
         m_meshAssets.push_back(ModelLoader::Load(m_graphics.GetDevice(), "Assets/Models/basic/cube.obj"));      // Index 0
         m_meshAssets.push_back(ModelLoader::Load(m_graphics.GetDevice(), "Assets/Models/basic/cylinder.obj"));  // Index 1
         m_meshAssets.push_back(ModelLoader::Load(m_graphics.GetDevice(), "Assets/Models/basic/cone.obj"));      // Index 2
@@ -69,6 +69,16 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         auto normWood = TextureLoader::Load(m_graphics.GetDevice(), m_graphics.GetContext(), L"Assets/Textures/pine_bark_disp_4k.png");
         auto texMetal = TextureLoader::Load(m_graphics.GetDevice(), m_graphics.GetContext(), L"Assets/Textures/blue_metal_plate_diff_4k.jpg");
         auto normMetal = TextureLoader::Load(m_graphics.GetDevice(), m_graphics.GetContext(), L"Assets/Textures/blue_metal_plate_disp_4k.png");
+
+        // Load Font Texture (Ensure you have a font.png in Assets/Textures)
+        // Uses a 16x16 grid layout for ASCII characters
+        try {
+            auto fontTex = TextureLoader::Load(m_graphics.GetDevice(), m_graphics.GetContext(), L"Assets/Textures/font.png");
+            m_font.Initialize(fontTex);
+        }
+        catch (...) {
+            // Font missing, ignore for now or log warning
+        }
 
         // 5. Create Materials
         auto matFloor = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.2f, 10.0f, texWood, normWood);   // Textured Wood
@@ -154,6 +164,16 @@ void Game::Run()
 
 void Game::Update(float deltaTime)
 {
+    // FPS Logic
+    m_frameCount++;
+    m_timeAccum += deltaTime;
+    if (m_timeAccum >= 1.0f)
+    {
+        m_fps = m_frameCount;
+        m_frameCount = 0;
+        m_timeAccum -= 1.0f;
+    }
+
     m_input.Update();
 
     if (m_input.IsKeyDown(VK_ESCAPE)) PostQuitMessage(0);
@@ -207,5 +227,14 @@ void Game::Update(float deltaTime)
 
 void Game::Render()
 {
+    // 1. Render 3D Scene
     m_graphics.RenderFrame(m_camera.get(), m_gameObjects, m_dirLight, m_pointLights);
+
+    // 2. Render UI (Overlay)
+    m_graphics.EnableUIState();
+
+    float color[4] = { 1.0f, 1.0f, 0.0f, 1.0f }; // Yellow Text
+    m_font.DrawString(m_graphics, "FPS: " + std::to_string(m_fps), 10.0f, 10.0f, 30.0f, color);
+
+    m_graphics.DisableUIState();
 }

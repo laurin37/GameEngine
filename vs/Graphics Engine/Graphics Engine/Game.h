@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "GameObject.h"
 #include "Mesh.h" // Added to support vector<unique_ptr<Mesh>>
+#include "SimpleFont.h" // Added SimpleFont
 #include <memory>
 #include <vector>
 #include <chrono>
@@ -26,6 +27,7 @@ private:
     Window m_window;
     Graphics m_graphics;
     Input m_input;
+    SimpleFont m_font; // UI Font
 
     std::unique_ptr<Camera> m_camera;
 
@@ -40,4 +42,9 @@ private:
     std::vector<PointLight> m_pointLights;
 
     std::chrono::steady_clock::time_point m_lastTime;
+
+    // FPS Counter
+    int m_fps = 0;
+    int m_frameCount = 0;
+    float m_timeAccum = 0.0f;
 };
