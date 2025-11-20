@@ -26,12 +26,18 @@ const char* vertexShaderSource = R"(
         float4 pos : SV_POSITION;
         float2 uv : TEXCOORD;
         float3 normal : NORMAL;
+        float3 worldPos : WORLD_POS;
     };
 
     PS_INPUT main(VS_INPUT input)
     {
         PS_INPUT output;
         float4 pos = float4(input.pos, 1.0f);
+        
+        // Transform position to world space for the pixel shader
+        output.worldPos = mul(pos, worldMatrix).xyz;
+
+        // Transform position to clip space
         pos = mul(pos, worldMatrix);
         pos = mul(pos, viewMatrix);
         pos = mul(pos, projectionMatrix);
@@ -52,6 +58,9 @@ const char* pixelShaderSource = R"(
     {
         float4 lightDir;
         float4 lightColor;
+        float4 cameraPos;
+        float specularIntensity;
+        float specularPower;
     }
 
     struct PS_INPUT
@@ -59,17 +68,28 @@ const char* pixelShaderSource = R"(
         float4 pos : SV_POSITION;
         float2 uv : TEXCOORD;
         float3 normal : NORMAL;
+        float3 worldPos : WORLD_POS;
     };
 
     float4 main(PS_INPUT input) : SV_TARGET
     {
         float4 texColor = proceduralTexture.Sample(pointSampler, input.uv);
         
-        // Lighting
+        // Ambient
         float ambient = 0.1f;
-        float diffuse = saturate(dot(input.normal, -lightDir.xyz));
         
-        float3 finalColor = texColor.rgb * (diffuse * lightColor.rgb + ambient);
+        // Diffuse
+        float diffuse = saturate(dot(input.normal, -lightDir.xyz));
+        float3 diffuseColor = texColor.rgb * (diffuse * lightColor.rgb + ambient);
+
+        // Specular (Blinn-Phong)
+        float3 viewDir = normalize(cameraPos.xyz - input.worldPos);
+        float3 halfVector = normalize(-lightDir.xyz + viewDir);
+        float spec = pow(saturate(dot(input.normal, halfVector)), specularPower);
+        float3 specColor = specularIntensity * spec * lightColor.rgb;
+
+        // Final color
+        float3 finalColor = diffuseColor + specColor;
         return float4(finalColor, texColor.a);
     }
 )";
@@ -152,36 +172,12 @@ void Graphics::InitPipeline()
     ThrowIfFailed(m_device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), nullptr, &m_pixelShader));
 
     Vertex vertices[] = {
-        // Front Face (normal: 0, 0, -1)
-        { {-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
-        { {-0.5f,  0.5f, -0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
-        { { 0.5f,  0.5f, -0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
-        { { 0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
-        // Back Face (normal: 0, 0, 1)
-        { { 0.5f, -0.5f,  0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
-        { { 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },
-        { {-0.5f,  0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },
-        { {-0.5f, -0.5f,  0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
-        // Top Face (normal: 0, 1, 0)
-        { {-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },
-        { {-0.5f, 0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },
-        { { 0.5f, 0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },
-        { { 0.5f, 0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },
-        // Bottom Face (normal: 0, -1, 0)
-        { { 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
-        { { 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
-        { {-0.5f, -0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
-        { {-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
-        // Left Face (normal: -1, 0, 0)
-        { {-0.5f, -0.5f,  0.5f}, {0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} },
-        { {-0.5f,  0.5f,  0.5f}, {0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
-        { {-0.5f,  0.5f, -0.5f}, {1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
-        { {-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} },
-        // Right Face (normal: 1, 0, 0)
-        { { 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f} },
-        { { 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
-        { { 0.5f,  0.5f,  0.5f}, {1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
-        { { 0.5f, -0.5f,  0.5f}, {1.0f, 1.0f}, {1.0f, 0.0f, 0.0f} }
+        { {-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, -1.0f} }, { {-0.5f,  0.5f, -0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} }, { { 0.5f,  0.5f, -0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, -1.0f} }, { { 0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
+        { { 0.5f, -0.5f,  0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },  { { 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },  { {-0.5f,  0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },  { {-0.5f, -0.5f,  0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
+        { {-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },  { {-0.5f, 0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },  { { 0.5f, 0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },  { { 0.5f, 0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },
+        { { 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, { { 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, -1.0f, 0.0f} }, { {-0.5f, -0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} }, { {-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
+        { {-0.5f, -0.5f,  0.5f}, {0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} }, { {-0.5f,  0.5f,  0.5f}, {0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} }, { {-0.5f,  0.5f, -0.5f}, {1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} }, { {-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} },
+        { { 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f} },  { { 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },  { { 0.5f,  0.5f,  0.5f}, {1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },  { { 0.5f, -0.5f,  0.5f}, {1.0f, 1.0f}, {1.0f, 0.0f, 0.0f} }
     };
     D3D11_BUFFER_DESC bd = {};
     bd.Usage = D3D11_USAGE_DEFAULT;
@@ -190,9 +186,7 @@ void Graphics::InitPipeline()
     D3D11_SUBRESOURCE_DATA sd = {vertices, 0, 0};
     ThrowIfFailed(m_device->CreateBuffer(&bd, &sd, &m_vertexBuffer));
 
-    unsigned int indices[] = {
-        0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23
-    };
+    unsigned int indices[] = { 0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23 };
     D3D11_BUFFER_DESC ibd = {};
     ibd.Usage = D3D11_USAGE_DEFAULT;
     ibd.ByteWidth = sizeof(unsigned int) * ARRAYSIZE(indices);
@@ -240,14 +234,16 @@ void Graphics::InitPipeline()
 
 void Graphics::RenderFrame()
 {
-    m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), new float[4]{ 0.0f, 0.2f, 0.4f, 1.0f });
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
     m_deviceContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
     m_rotation += 0.002f;
     if (m_rotation > 6.28f) m_rotation = 0.0f;
 
+    DirectX::XMVECTOR cameraPos = DirectX::XMVectorSet(0.0f, 0.0f, -2.5f, 0.0f);
     m_worldMatrix = DirectX::XMMatrixRotationY(m_rotation) * DirectX::XMMatrixRotationX(m_rotation / 2.0f);
-    m_viewMatrix = DirectX::XMMatrixLookAtLH({ 0.0f, 0.0f, -2.5f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
+    m_viewMatrix = DirectX::XMMatrixLookAtLH(cameraPos, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
 
     CB_VS_vertexshader vs_cb;
     DirectX::XMStoreFloat4x4(&vs_cb.worldMatrix, DirectX::XMMatrixTranspose(m_worldMatrix));
@@ -258,6 +254,9 @@ void Graphics::RenderFrame()
     CB_PS_light ps_cb;
     DirectX::XMStoreFloat4(&ps_cb.lightDir, DirectX::XMVector3Normalize(DirectX::XMVectorSet(0.5f, -0.5f, 1.0f, 0.0f)));
     ps_cb.lightColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    DirectX::XMStoreFloat4(&ps_cb.cameraPos, cameraPos);
+    ps_cb.specularIntensity = 1.0f;
+    ps_cb.specularPower = 32.0f;
     m_deviceContext->UpdateSubresource(m_psConstantBuffer.Get(), 0, nullptr, &ps_cb, 0, 0);
 
     m_deviceContext->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());

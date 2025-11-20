@@ -36,6 +36,10 @@ struct CB_PS_light
 {
     DirectX::XMFLOAT4 lightDir;
     DirectX::XMFLOAT4 lightColor;
+    DirectX::XMFLOAT4 cameraPos;
+    float specularIntensity;
+    float specularPower;
+    float padding[2]; // Pad to a 16-byte boundary
 };
 
 class Graphics
