@@ -35,5 +35,9 @@ private:
     // The actual objects in the scene
     std::vector<std::unique_ptr<GameObject>> m_gameObjects;
 
+    // Lighting
+    DirectionalLight m_dirLight;
+    std::vector<PointLight> m_pointLights;
+
     std::chrono::steady_clock::time_point m_lastTime;
 };

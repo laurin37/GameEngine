@@ -61,10 +61,25 @@ const char* pixelShaderSource = R"(
     SamplerState g_sampler : register(s0);
     SamplerComparisonState g_shadowSampler : register(s1);
 
+    // --- C++ Structs (for reference) ---
+    /*
+    struct DirectionalLight { float4 direction; float4 color; };
+    struct PointLight { float4 position; float4 color; float4 attenuation; };
+    struct CB_PS_Frame { DirectionalLight dirLight; PointLight pointLights[4]; float4 cameraPos; };
+    */
+
     cbuffer FrameData : register(b0)
     {
-        float4 lightDir;
-        float4 lightColor;
+        // Directional Light
+        float4 dirLightDirection;
+        float4 dirLightColor;
+
+        // Point Lights
+        float4 pointLightPos[4];
+        float4 pointLightColor[4];
+        float4 pointLightAtt[4];
+
+        // Camera
         float4 cameraPos;
     }
 
@@ -83,12 +98,28 @@ const char* pixelShaderSource = R"(
         float4 lightSpacePos : TEXCOORD1;
     };
 
+    // --- Helper Function ---
+    float3 CalcLighting(float3 litColor, float3 normal, float3 lightVec, float3 lightColor, float3 viewDir, float specIntensity, float specPower)
+    {
+        // Diffuse
+        float diffuseFactor = saturate(dot(normal, lightVec));
+        float3 diffuse = litColor * diffuseFactor * lightColor;
+
+        // Specular (Blinn-Phong)
+        float3 halfVector = normalize(lightVec + viewDir);
+        float specFactor = pow(saturate(dot(normal, halfVector)), specPower);
+        float3 specular = specIntensity * specFactor * lightColor;
+
+        return diffuse + specular;
+    }
+
+
     float4 main(PS_INPUT input) : SV_TARGET
     {
         float4 texColor = g_texture.Sample(g_sampler, input.uv);
-        float3 litColor = texColor.rgb * surfaceColor.rgb;
+        float3 baseColor = texColor.rgb * surfaceColor.rgb;
         
-        // --- Shadow Calculation (3x3 PCF) ---
+        // --- Shadow Calculation ---
         float shadowFactor = 0.0;
         float3 projCoords = input.lightSpacePos.xyz / input.lightSpacePos.w;
         projCoords.x = projCoords.x * 0.5 + 0.5;
@@ -110,23 +141,40 @@ const char* pixelShaderSource = R"(
         }
         else
         {
-            shadowFactor = 1.0; // Don't cast shadows outside the light's view
+            shadowFactor = 1.0;
         }
         
         // --- Lighting ---
-        float ambient = 0.15f;
-        float3 ambientColor = litColor * ambient;
-
-        float diffuse = saturate(dot(input.normal, -lightDir.xyz));
-        float3 diffuseLight = litColor * diffuse * lightColor.rgb;
-
+        float3 finalColor = float3(0, 0, 0);
         float3 viewDir = normalize(cameraPos.xyz - input.worldPos);
-        float3 halfVector = normalize(-lightDir.xyz + viewDir);
-        float spec = pow(saturate(dot(input.normal, halfVector)), specularPower);
-        float3 specColor = specularIntensity * spec * lightColor.rgb;
 
-        // Final color with shadows on direct light only
-        float3 finalColor = ambientColor + (diffuseLight + specColor) * shadowFactor;
+        // 1. Ambient Light
+        finalColor += baseColor * 0.15f;
+
+        // 2. Directional Light (with shadows)
+        float3 dirLightContrib = CalcLighting(baseColor, input.normal, -dirLightDirection.xyz, dirLightColor.rgb * dirLightColor.a, viewDir, specularIntensity, specularPower);
+        finalColor += dirLightContrib * shadowFactor;
+
+        // 3. Point Lights
+        [unroll]
+        for (int i = 0; i < 4; ++i)
+        {
+            float3 lightVec = pointLightPos[i].xyz - input.worldPos;
+            float dist = length(lightVec);
+            
+            // Only calculate if within range
+            if (dist < pointLightPos[i].w)
+            {
+                lightVec = normalize(lightVec);
+
+                float3 pointLightContrib = CalcLighting(baseColor, input.normal, lightVec, pointLightColor[i].rgb * pointLightColor[i].a, viewDir, specularIntensity, specularPower);
+                
+                // Attenuation
+                float att = 1.0 / (pointLightAtt[i].x + pointLightAtt[i].y * dist + pointLightAtt[i].z * dist * dist);
+                finalColor += pointLightContrib * att;
+            }
+        }
+
         return float4(finalColor, texColor.a);
     }
 )";
@@ -306,11 +354,16 @@ Mesh* Graphics::GetMeshAsset() const
     return m_meshAsset.get();
 }
 
-void Graphics::RenderFrame(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& gameObjects)
+void Graphics::RenderFrame(
+    Camera* camera,
+    const std::vector<std::unique_ptr<GameObject>>& gameObjects,
+    const DirectionalLight& dirLight,
+    const std::vector<PointLight>& pointLights
+)
 {
     DirectX::XMMATRIX lightView, lightProj;
     RenderShadowPass(gameObjects, lightView, lightProj);
-    RenderMainPass(camera, gameObjects, lightView * lightProj);
+    RenderMainPass(camera, gameObjects, lightView * lightProj, dirLight, pointLights);
     ThrowIfFailed(m_swapChain->Present(1, 0));
 }
 
@@ -352,7 +405,13 @@ void Graphics::RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& 
     }
 }
 
-void Graphics::RenderMainPass(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& gameObjects, const DirectX::XMMATRIX& lightViewProj)
+void Graphics::RenderMainPass(
+    Camera* camera, 
+    const std::vector<std::unique_ptr<GameObject>>& gameObjects, 
+    const DirectX::XMMATRIX& lightViewProj,
+    const DirectionalLight& dirLight,
+    const std::vector<PointLight>& pointLights
+)
 {
     // Get window size to set viewport
     D3D11_TEXTURE2D_DESC backBufferDesc;
@@ -370,15 +429,25 @@ void Graphics::RenderMainPass(Camera* camera, const std::vector<std::unique_ptr<
     m_deviceContext->RSSetState(nullptr);
 
     m_deviceContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    const float clearColor[] = { 0.0f, 0.05f, 0.1f, 1.0f }; // Darker blue
     m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
     m_deviceContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
     DirectX::XMMATRIX viewMatrix = camera->GetViewMatrix();
 
+    // --- Update Frame Constant Buffer ---
     CB_PS_Frame ps_frame_cb;
-    DirectX::XMStoreFloat4(&ps_frame_cb.lightDir, DirectX::XMVector3Normalize(DirectX::XMVectorSet(-0.5f, -0.5f, 1.0f, 0.0f)));
-    ps_frame_cb.lightColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    ps_frame_cb.dirLight = dirLight;
+    for (size_t i = 0; i < MAX_POINT_LIGHTS; ++i)
+    {
+        if (i < pointLights.size()) {
+            ps_frame_cb.pointLights[i] = pointLights[i];
+        } else {
+            // Zero out unused lights
+            ps_frame_cb.pointLights[i] = {}; 
+            ps_frame_cb.pointLights[i].color.w = 0; // Intensity = 0
+        }
+    }
     DirectX::XMStoreFloat4(&ps_frame_cb.cameraPos, camera->GetPosition());
     m_deviceContext->UpdateSubresource(m_psFrameConstantBuffer.Get(), 0, nullptr, &ps_frame_cb, 0, 0);
 

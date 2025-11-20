@@ -25,7 +25,30 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         m_camera->SetPosition(0.0f, 5.0f, -15.0f); // Look slightly down at the scene
         m_camera->AdjustRotation(0.3f, 0.0f, 0.0f); // Tilt down
 
-        // 2. Load Basic Assets
+        // 2. Setup Lights
+        m_dirLight.direction = { 0.5f, -0.7f, 0.5f, 0.0f };
+        m_dirLight.color = { 0.2f, 0.2f, 0.3f, 1.0f }; // Dim blueish moonlight
+
+        m_pointLights.resize(MAX_POINT_LIGHTS);
+        // Red Light
+        m_pointLights[0].position = { 0.0f, 0.0f, 0.0f, 15.0f }; // Pos, Range
+        m_pointLights[0].color = { 1.0f, 0.0f, 0.0f, 2.0f };   // Color, Intensity
+        m_pointLights[0].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f }; // Const, Lin, Quad
+        // Green Light
+        m_pointLights[1].position = { 0.0f, 0.0f, 0.0f, 15.0f };
+        m_pointLights[1].color = { 0.0f, 1.0f, 0.0f, 2.0f };
+        m_pointLights[1].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f };
+        // Blue Light
+        m_pointLights[2].position = { 0.0f, 0.0f, 0.0f, 15.0f };
+        m_pointLights[2].color = { 0.0f, 0.0f, 1.0f, 2.0f };
+        m_pointLights[2].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f };
+        // Orange Light
+        m_pointLights[3].position = { 0.0f, 0.0f, 0.0f, 15.0f };
+        m_pointLights[3].color = { 1.0f, 0.5f, 0.0f, 2.0f };
+        m_pointLights[3].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f };
+
+
+        // 3. Load Basic Assets
         // Note: We store them in m_meshAssets so they stay alive for the GameObjects to reference
         m_meshAssets.push_back(ModelLoader::Load(m_graphics.GetDevice(), "Assets/Models/basic/cube.obj"));      // Index 0
         m_meshAssets.push_back(ModelLoader::Load(m_graphics.GetDevice(), "Assets/Models/basic/cylinder.obj"));  // Index 1
@@ -39,18 +62,18 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         Mesh* meshSphere = m_meshAssets[3].get();
         Mesh* meshTorus = m_meshAssets[4].get();
 
-        // 3. Load Textures
+        // 4. Load Textures
         auto texWood = TextureLoader::Load(m_graphics.GetDevice(), m_graphics.GetContext(), L"Assets/Textures/pine_bark_diff_4k.jpg");
         auto texMetal = TextureLoader::Load(m_graphics.GetDevice(), m_graphics.GetContext(), L"Assets/Textures/blue_metal_plate_diff_4k.jpg");
 
-        // 4. Create Materials
+        // 5. Create Materials
         auto matFloor = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.2f, 10.0f, texWood);   // Textured Wood
         auto matPillar = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.8f, 32.0f, texMetal); // Textured Metal
         auto matRoof = std::make_shared<Material>(DirectX::XMFLOAT4(0.8f, 0.1f, 0.1f, 1.0f), 0.8f, 32.0f);  // Shiny Red (No Texture)
         auto matGold = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 0.8f, 0.0f, 1.0f), 1.0f, 64.0f);  // Gold (No Texture)
         auto matGlowing = std::make_shared<Material>(DirectX::XMFLOAT4(0.2f, 1.0f, 1.0f, 1.0f), 1.0f, 128.0f); // Cyan (No Texture)
 
-        // 5. Build Scene
+        // 6. Build Scene
 
         // -- The Floor --
         auto floor = std::make_unique<GameObject>(meshCube, matFloor);
@@ -167,13 +190,18 @@ void Game::Update(float deltaTime)
             float z = cos(time + offset) * radius;
             float y = 2.0f + sin(time * 2.0f + offset) * 0.5f; // Bob up and down
 
-            // Indices 11, 12, 13, 14
+            // Update game object positions (Indices 11, 12, 13, 14)
             m_gameObjects[11 + i]->SetPosition(x, y, z);
+
+            // Update point light positions to follow the orbs
+            m_pointLights[i].position.x = x;
+            m_pointLights[i].position.y = y;
+            m_pointLights[i].position.z = z;
         }
     }
 }
 
 void Game::Render()
 {
-    m_graphics.RenderFrame(m_camera.get(), m_gameObjects);
+    m_graphics.RenderFrame(m_camera.get(), m_gameObjects, m_dirLight, m_pointLights);
 }

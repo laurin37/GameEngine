@@ -13,6 +13,22 @@ class Mesh;
 class Camera;
 class GameObject;
 
+// --- Lighting Structs ---
+struct DirectionalLight
+{
+    DirectX::XMFLOAT4 direction; // w = unused
+    DirectX::XMFLOAT4 color;     // w = intensity
+};
+
+struct PointLight
+{
+    DirectX::XMFLOAT4 position;    // w = range
+    DirectX::XMFLOAT4 color;       // w = intensity
+    DirectX::XMFLOAT4 attenuation; // x = constant, y = linear, z = quadratic
+};
+
+const int MAX_POINT_LIGHTS = 4;
+
 // Constant buffer for vertex shader
 struct CB_VS_vertexshader
 {
@@ -25,8 +41,8 @@ struct CB_VS_vertexshader
 // Constant buffer for pixel shader (per-frame data)
 struct CB_PS_Frame
 {
-    DirectX::XMFLOAT4 lightDir;
-    DirectX::XMFLOAT4 lightColor;
+    DirectionalLight dirLight;
+    PointLight pointLights[MAX_POINT_LIGHTS];
     DirectX::XMFLOAT4 cameraPos;
 };
 
@@ -42,7 +58,12 @@ public:
     Graphics& operator=(const Graphics&) = delete;
 
     void Initialize(HWND hwnd, int width, int height);
-    void RenderFrame(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& gameObjects);
+    void RenderFrame(
+        Camera* camera, 
+        const std::vector<std::unique_ptr<GameObject>>& gameObjects,
+        const DirectionalLight& dirLight,
+        const std::vector<PointLight>& pointLights
+    );
     
     ID3D11Device* GetDevice() const;
     ID3D11DeviceContext* GetContext() const;
@@ -51,7 +72,13 @@ public:
 private:
     void InitPipeline();
     void RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& gameObjects, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj);
-    void RenderMainPass(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& gameObjects, const DirectX::XMMATRIX& lightViewProj);
+    void RenderMainPass(
+        Camera* camera, 
+        const std::vector<std::unique_ptr<GameObject>>& gameObjects, 
+        const DirectX::XMMATRIX& lightViewProj,
+        const DirectionalLight& dirLight,
+        const std::vector<PointLight>& pointLights
+    );
 
     // Core D3D objects
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
