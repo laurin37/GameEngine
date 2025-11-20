@@ -20,6 +20,7 @@ struct Vertex
 {
     DirectX::XMFLOAT3 pos;
     DirectX::XMFLOAT2 uv;
+    DirectX::XMFLOAT3 normal;
 };
 
 // Constant buffer for vertex shader
@@ -28,6 +29,13 @@ struct CB_VS_vertexshader
     DirectX::XMFLOAT4X4 worldMatrix;
     DirectX::XMFLOAT4X4 viewMatrix;
     DirectX::XMFLOAT4X4 projectionMatrix;
+};
+
+// Constant buffer for pixel shader
+struct CB_PS_light
+{
+    DirectX::XMFLOAT4 lightDir;
+    DirectX::XMFLOAT4 lightColor;
 };
 
 class Graphics
@@ -63,7 +71,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_indexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> m_constantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_vsConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> m_psConstantBuffer;
 
     // Texturing objects
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_textureView;
