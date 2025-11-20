@@ -98,4 +98,4 @@ Excluded Libraries
 
 Do not use: GLM, GLFW, GLUT, SDL2, or raw standard arrays (use std::vector).
 
-Always update ReadMe.md and .gitignore if necessary.
+Always update README.md and .gitignore if necessary.
