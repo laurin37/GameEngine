@@ -82,4 +82,7 @@ private:
     // Matrices
     DirectX::XMMATRIX m_worldMatrix;
     DirectX::XMMATRIX m_projectionMatrix;
+
+    // Animation
+    float m_rotation;
 };
