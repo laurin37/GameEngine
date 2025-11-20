@@ -94,10 +94,10 @@ const char* pixelShaderSource = R"(
         projCoords.x = projCoords.x * 0.5 + 0.5;
         projCoords.y = projCoords.y * -0.5 + 0.5;
 
-        float shadowBias = 0.0005f; // Tweakable value for shadow acne
+        float shadowBias = 0.0005f;
         float texelSize = 1.0 / 2048.0;
 
-        if (saturate(projCoords.z) > 0.0 && saturate(projCoords.x) > 0.0 && saturate(projCoords.y) > 0.0)
+        if (saturate(projCoords.z) > 0.0 && saturate(projCoords.x) > 0.0 && saturate(projCoords.x) < 1.0 && saturate(projCoords.y) > 0.0 && saturate(projCoords.y) < 1.0)
         {
             for (int x = -1; x <= 1; ++x)
             {
@@ -107,6 +107,10 @@ const char* pixelShaderSource = R"(
                 }
             }
             shadowFactor /= 9.0;
+        }
+        else
+        {
+            shadowFactor = 1.0; // Don't cast shadows outside the light's view
         }
         
         // --- Lighting ---
@@ -199,17 +203,6 @@ void Graphics::InitPipeline()
     if (FAILED(hr)) { if (errorBlob) { throw std::runtime_error(std::string("Shadow VS Error: ") + (char*)errorBlob->GetBufferPointer()); } else { ThrowIfFailed(hr); } }
     ThrowIfFailed(m_device->CreateVertexShader(shadowVSBlob->GetBufferPointer(), shadowVSBlob->GetBufferSize(), nullptr, &m_shadowVS));
 
-    std::vector<Vertex> vertices = {
-        { {-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, -1.0f} }, { {-0.5f,  0.5f, -0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} }, { { 0.5f,  0.5f, -0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, -1.0f} }, { { 0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
-        { { 0.5f, -0.5f,  0.5f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },  { { 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },  { {-0.5f,  0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },  { {-0.5f, -0.5f,  0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
-        { {-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },  { {-0.5f, 0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },  { { 0.5f, 0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },  { { 0.5f, 0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },
-        { { 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, { { 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f}, {0.0f, -1.0f, 0.0f} }, { {-0.5f, -0.5f,  0.5f}, {1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} }, { {-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
-        { {-0.5f, -0.5f,  0.5f}, {0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} }, { {-0.5f,  0.5f,  0.5f}, {0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} }, { {-0.5f,  0.5f, -0.5f}, {1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} }, { {-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} },
-        { { 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f} },  { { 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },  { { 0.5f,  0.5f,  0.5f}, {1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },  { { 0.5f, -0.5f,  0.5f}, {1.0f, 1.0f}, {1.0f, 0.0f, 0.0f} }
-    };
-    std::vector<unsigned int> indices = { 0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23 };
-    m_meshAsset = std::make_unique<Mesh>(m_device.Get(), vertices, indices);
-
     D3D11_BUFFER_DESC cbd = {};
     cbd.Usage = D3D11_USAGE_DEFAULT;
     cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -297,6 +290,11 @@ void Graphics::InitPipeline()
     ThrowIfFailed(m_device->CreateRasterizerState(&rsDesc, &m_shadowRS));
 }
 
+ID3D11Device* Graphics::GetDevice() const
+{
+    return m_device.Get();
+}
+
 Mesh* Graphics::GetMeshAsset() const
 {
     return m_meshAsset.get();
@@ -336,6 +334,7 @@ void Graphics::RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& 
 
     for (const auto& pGameObject : gameObjects)
     {
+        if (!pGameObject) continue;
         DirectX::XMMATRIX worldMatrix = pGameObject->GetWorldMatrix();
         DirectX::XMMATRIX wvp = worldMatrix * outLightView * outLightProj;
         
@@ -349,6 +348,7 @@ void Graphics::RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& 
 
 void Graphics::RenderMainPass(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& gameObjects, const DirectX::XMMATRIX& lightViewProj)
 {
+    // Get window size to set viewport
     D3D11_TEXTURE2D_DESC backBufferDesc;
     Microsoft::WRL::ComPtr<ID3D11Resource> backBuffer;
     m_swapChain->GetBuffer(0, __uuidof(ID3D11Resource), &backBuffer);
@@ -389,6 +389,7 @@ void Graphics::RenderMainPass(Camera* camera, const std::vector<std::unique_ptr<
 
     for (const auto& pGameObject : gameObjects)
     {
+        if (!pGameObject) continue;
         DirectX::XMMATRIX worldMatrix = pGameObject->GetWorldMatrix();
 
         CB_VS_vertexshader vs_cb;

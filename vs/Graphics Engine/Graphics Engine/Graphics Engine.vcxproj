@@ -135,6 +135,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -146,7 +147,43 @@
     <ClInclude Include="Input.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="ModelLoader.h" />
     <ClInclude Include="Window.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Models\interieur.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\basic\cone.mtl" />
+    <None Include="Assets\Models\basic\cube.mtl" />
+    <None Include="Assets\Models\basic\cylinder.mtl" />
+    <None Include="Assets\Models\windmill.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\basic\sphere.mtl" />
+    <None Include="Assets\Models\city.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\basic\torus.mtl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Models\basic\cube.obj">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Models\basic\cone.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\basic\cylinder.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\basic\sphere.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\basic\torus.obj">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

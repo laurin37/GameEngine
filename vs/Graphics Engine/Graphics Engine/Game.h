@@ -5,6 +5,7 @@
 #include "Input.h"
 #include "Camera.h"
 #include "GameObject.h"
+#include "Mesh.h" // Added to support vector<unique_ptr<Mesh>>
 #include <memory>
 #include <vector>
 #include <chrono>
@@ -27,7 +28,12 @@ private:
     Input m_input;
 
     std::unique_ptr<Camera> m_camera;
+
+    // Storage for the loaded raw mesh data
+    std::vector<std::unique_ptr<Mesh>> m_meshAssets;
+
+    // The actual objects in the scene
     std::vector<std::unique_ptr<GameObject>> m_gameObjects;
-    
+
     std::chrono::steady_clock::time_point m_lastTime;
 };

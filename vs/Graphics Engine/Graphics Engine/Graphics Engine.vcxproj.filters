@@ -42,6 +42,9 @@
     <ClCompile Include="Material.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="ModelLoader.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Window.h">
@@ -71,5 +74,23 @@
     <ClInclude Include="Material.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="ModelLoader.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Models\interieur.obj" />
+    <None Include="Assets\Models\windmill.obj" />
+    <None Include="Assets\Models\city.obj" />
+    <None Include="Assets\Models\basic\cube.mtl" />
+    <None Include="Assets\Models\basic\cube.obj" />
+    <None Include="Assets\Models\basic\cone.mtl" />
+    <None Include="Assets\Models\basic\cylinder.mtl" />
+    <None Include="Assets\Models\basic\sphere.mtl" />
+    <None Include="Assets\Models\basic\torus.mtl" />
+    <None Include="Assets\Models\basic\torus.obj" />
+    <None Include="Assets\Models\basic\sphere.obj" />
+    <None Include="Assets\Models\basic\cylinder.obj" />
+    <None Include="Assets\Models\basic\cone.obj" />
   </ItemGroup>
 </Project>

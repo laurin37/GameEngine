@@ -44,6 +44,7 @@ public:
     void Initialize(HWND hwnd, int width, int height);
     void RenderFrame(Camera* camera, const std::vector<std::unique_ptr<GameObject>>& gameObjects);
     
+    ID3D11Device* GetDevice() const;
     Mesh* GetMeshAsset() const;
 
 private:
