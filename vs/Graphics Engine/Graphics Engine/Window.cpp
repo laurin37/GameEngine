@@ -71,6 +71,7 @@ void Window::Initialize(
 
     ShowWindow(m_hWnd, nCmdShow);
     UpdateWindow(m_hWnd);
+    ShowCursor(FALSE);
 }
 
 bool Window::ProcessMessages()
