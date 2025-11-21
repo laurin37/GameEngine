@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "Material.h"
 #include "Skybox.h"
+#include "PostProcess.h"
 #include <vector>
 #include <string>
 
@@ -132,6 +133,9 @@ void Graphics::Initialize(HWND hwnd, int width, int height)
 
     m_skybox = std::make_unique<Skybox>();
     m_skybox->Init(m_device.Get(), m_deviceContext.Get(), L"Assets/Textures/sky.jpg");
+
+    m_postProcess = std::make_unique<PostProcess>();
+    m_postProcess->Init(m_device.Get(), width, height);
 
     m_projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(
         DirectX::XM_PIDIV4, static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f
@@ -325,12 +329,20 @@ void Graphics::RenderFrame(
     const std::vector<PointLight>& pointLights
 )
 {
+    // 1. Render Shadows (Does not affect main Color Buffer)
     DirectX::XMMATRIX lightView, lightProj;
     RenderShadowPass(gameObjects, lightView, lightProj);
+
+    // 2. Bind Post-Process Render Target (Off-screen Texture)
+    // This CLEARS the Off-screen RTV and the Main Depth Buffer
+    m_postProcess->Bind(m_deviceContext.Get(), m_depthStencilView.Get());
+
+    // 3. Render Main Scene to Off-screen Texture
     RenderMainPass(camera, gameObjects, lightView * lightProj, dirLight, pointLights);
 
-    // Removed: ThrowIfFailed(m_swapChain->Present(1, 0)); 
-    // Presentation is now manual via Present()
+    // 4. Apply Post-Processing and Draw to Back Buffer
+    // This CLEARS the Back Buffer and draws the quad
+    m_postProcess->Draw(m_deviceContext.Get(), m_renderTargetView.Get());
 }
 
 void Graphics::Present()
@@ -444,10 +456,8 @@ void Graphics::RenderMainPass(
 
     m_deviceContext->RSSetState(nullptr);
 
-    m_deviceContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
-    const float clearColor[] = { 0.0f, 0.05f, 0.1f, 1.0f };
-    m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
-    m_deviceContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+    // REMOVED: OMSetRenderTargets and ClearRenderTargetView
+    // This allows drawing to the currently bound target (Offscreen Buffer)
 
     DirectX::XMMATRIX viewMatrix = camera->GetViewMatrix();
 

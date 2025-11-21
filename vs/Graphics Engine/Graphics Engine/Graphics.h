@@ -14,6 +14,7 @@ class Mesh;
 class Camera;
 class GameObject;
 class Skybox;
+class PostProcess;
 
 // --- Lighting Structs ---
 struct DirectionalLight
@@ -151,6 +152,7 @@ private:
     // Scene Assets
     std::unique_ptr<Mesh> m_meshAsset;
     std::unique_ptr<Skybox> m_skybox;
+    std::unique_ptr<PostProcess> m_postProcess;
 
     // Matrices
     DirectX::XMMATRIX m_projectionMatrix;

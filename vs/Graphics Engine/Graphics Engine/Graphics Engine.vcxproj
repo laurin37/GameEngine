@@ -136,6 +136,7 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="ModelLoader.cpp" />
+    <ClCompile Include="PostProcess.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SimpleFont.cpp" />
     <ClCompile Include="Skybox.cpp" />
@@ -152,6 +153,7 @@
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="ModelLoader.h" />
+    <ClInclude Include="PostProcess.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="SimpleFont.h" />
     <ClInclude Include="Skybox.h" />
@@ -215,6 +217,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Skybox.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\PostProcess.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

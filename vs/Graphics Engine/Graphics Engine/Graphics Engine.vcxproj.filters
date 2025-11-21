@@ -57,6 +57,9 @@
     <ClCompile Include="Skybox.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="PostProcess.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Window.h">
@@ -101,6 +104,9 @@
     <ClInclude Include="Skybox.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="PostProcess.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Models\interieur.obj" />
@@ -119,6 +125,7 @@
     <None Include="Shaders\Shadow.hlsl" />
     <None Include="Shaders\Standard.hlsl" />
     <None Include="Shaders\Skybox.hlsl" />
+    <None Include="Shaders\PostProcess.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Textures\blue_metal_plate_diff_4k.jpg">
