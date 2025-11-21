@@ -12,11 +12,13 @@
 #include <vector>
 #include <chrono>
 
+class AssetManager; // Forward Declaration
+
 class Game
 {
 public:
     Game();
-    ~Game() = default;
+    ~Game();
 
     bool Initialize(HINSTANCE hInstance, int nCmdShow);
     void Run();
@@ -24,17 +26,16 @@ public:
 private:
     void Update(float deltaTime);
     void Render();
+    void LoadScene();
 
     Window m_window;
     Graphics m_graphics;
     std::unique_ptr<Renderer> m_renderer;
+    std::unique_ptr<AssetManager> m_assetManager;
     Input m_input;
     SimpleFont m_font; // UI Font
 
     std::unique_ptr<Camera> m_camera;
-
-    // Storage for the loaded raw mesh data
-    std::vector<std::unique_ptr<Mesh>> m_meshAssets;
 
     // The actual objects in the scene
     std::vector<std::unique_ptr<GameObject>> m_gameObjects;
