@@ -1,0 +1,28 @@
+name: Build Engine
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+
+    steps:
+    # 1. Check out the repository (download code to the server)
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Configure CMake
+    # -S "..." tells CMake where the source code (and CMakeLists.txt) is.
+    # We point it to your nested folder: "vs/Graphics Engine/Graphics Engine"
+    - name: Configure CMake
+      run: cmake -S "vs/Graphics Engine/Graphics Engine" -B build -DCMAKE_BUILD_TYPE=Release
+
+    # 3. Build
+    # This compiles the code using the configuration we just made in the 'build' folder
+    - name: Build
+      run: cmake --build build --config Release
