@@ -1,9 +1,11 @@
 #include "Game.h"
 #include "AssetManager.h"
+#include "UIRenderer.h"
 #include "Material.h"
 #include "ModelLoader.h"
 #include "TextureLoader.h"
 #include "Graphics.h" 
+#include "Collision.h"
 
 Game::Game()
     : m_dirLight{ {0.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f} }
@@ -29,6 +31,7 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
 
         // Create the asset manager
         m_assetManager = std::make_unique<AssetManager>(&m_graphics);
+        m_uiRenderer = std::make_unique<UIRenderer>(&m_graphics);
 
         // Load assets and set up the scene
         LoadScene();
@@ -162,6 +165,13 @@ void Game::Update(float deltaTime)
         m_timeAccum -= 1.0f;
     }
 
+    // --- Store last "safe" positions before update ---
+    m_lastPositions.resize(m_gameObjects.size());
+    for (size_t i = 0; i < m_gameObjects.size(); ++i)
+    {
+        m_lastPositions[i] = m_gameObjects[i]->GetPosition();
+    }
+
     m_input.Update();
 
     if (m_input.IsKeyDown(VK_ESCAPE)) PostQuitMessage(0);
@@ -205,18 +215,49 @@ void Game::Update(float deltaTime)
             m_pointLights[i].position.z = z;
         }
     }
+
+    UpdatePhysics(deltaTime);
+}
+
+void Game::UpdatePhysics(float deltaTime)
+{
+    // Simple N^2 collision detection
+    for (size_t i = 0; i < m_gameObjects.size(); ++i)
+    {
+        for (size_t j = i + 1; j < m_gameObjects.size(); ++j)
+        {
+            auto& objA = m_gameObjects[i];
+            auto& objB = m_gameObjects[j];
+
+            // Skip check if one of the objects is the floor
+            if (i == 0 || j == 0) continue;
+
+            AABB boxA = objA->GetWorldBoundingBox();
+            AABB boxB = objB->GetWorldBoundingBox();
+
+            if (AABBIntersects(boxA, boxB))
+            {
+                // Collision detected, revert BOTH to last safe position
+                const auto& posA = m_lastPositions[i];
+                objA->SetPosition(posA.x, posA.y, posA.z);
+
+                const auto& posB = m_lastPositions[j];
+                objB->SetPosition(posB.x, posB.y, posB.z);
+            }
+        }
+    }
 }
 
 void Game::Render()
 {
     m_renderer->RenderFrame(*m_camera, m_gameObjects, m_dirLight, m_pointLights);
 
-    //m_graphics.EnableUIState();
+    m_uiRenderer->EnableUIState();
 
-    //float color[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
-    //m_font.DrawString(m_graphics, "FPS: " + std::to_string(m_fps), 10.0f, 10.0f, 30.0f, color);
+    float color[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
+    m_uiRenderer->DrawString(m_font, "FPS: " + std::to_string(m_fps), 10.0f, 10.0f, 30.0f, color);
 
-    //m_graphics.DisableUIState();
+    m_uiRenderer->DisableUIState();
 
     m_graphics.Present();
 }

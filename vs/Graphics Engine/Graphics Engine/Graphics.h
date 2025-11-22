@@ -49,20 +49,6 @@ struct CB_PS_Frame
     DirectX::XMFLOAT4 cameraPos;
 };
 
-// --- UI Structures ---
-struct SpriteVertex
-{
-    DirectX::XMFLOAT3 pos;
-    DirectX::XMFLOAT2 uv;
-    DirectX::XMFLOAT4 color;
-};
-
-struct CB_VS_UI
-{
-    DirectX::XMFLOAT2 screenSize;
-    DirectX::XMFLOAT2 padding;
-};
-
 class Graphics
 {
 public:
@@ -75,11 +61,6 @@ public:
     void Initialize(HWND hwnd, int width, int height);
     void Present();
 
-    // --- UI Methods ---
-    void EnableUIState();
-    void DisableUIState();
-    void DrawUI(const SpriteVertex* vertices, size_t count, ID3D11ShaderResourceView* texture);
-
     // --- Getters for Renderer ---
     Microsoft::WRL::ComPtr<ID3D11Device> GetDevice() const;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> GetContext() const;
@@ -87,9 +68,10 @@ public:
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> GetDepthStencilView() const;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> GetBackBuffer() const;
 
-private:
-    void InitUI();
+    float GetScreenWidth() const;
+    float GetScreenHeight() const;
 
+private:
     // Core D3D objects
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_deviceContext;
@@ -101,16 +83,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthStencilView;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthStencilBuffer;
 
-    // UI Objects
-    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_uiVS;
-    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_uiPS;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> m_uiVertexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> m_uiConstantBuffer;
-    Microsoft::WRL::ComPtr<ID3D11BlendState> m_uiBlendState;
-    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_uiDepthStencilState;
-    Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_uiRS;
-    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_uiInputLayout;
-    Microsoft::WRL::ComPtr<ID3D11SamplerState> m_uiSamplerState;
     float m_screenWidth;
     float m_screenHeight;
 };

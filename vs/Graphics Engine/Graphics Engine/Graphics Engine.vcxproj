@@ -143,11 +143,13 @@
     <ClCompile Include="SimpleFont.cpp" />
     <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="TextureLoader.cpp" />
+    <ClCompile Include="UIRenderer.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AssetManager.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Collision.h" />
     <ClInclude Include="EnginePCH.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameObject.h" />
@@ -162,6 +164,7 @@
     <ClInclude Include="SimpleFont.h" />
     <ClInclude Include="Skybox.h" />
     <ClInclude Include="TextureLoader.h" />
+    <ClInclude Include="UIRenderer.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>

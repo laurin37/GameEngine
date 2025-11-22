@@ -7,12 +7,14 @@
 #include "Camera.h"
 #include "GameObject.h"
 #include "Mesh.h" // Added to support vector<unique_ptr<Mesh>>
-#include "SimpleFont.h" // Added SimpleFont
+#include "SimpleFont.h"
+#include "UIRenderer.h"
 #include <memory>
 #include <vector>
 #include <chrono>
 
 class AssetManager; // Forward Declaration
+class UIRenderer;   // Forward Declaration
 
 class Game
 {
@@ -27,11 +29,13 @@ private:
     void Update(float deltaTime);
     void Render();
     void LoadScene();
+    void UpdatePhysics(float deltaTime);
 
     Window m_window;
     Graphics m_graphics;
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<AssetManager> m_assetManager;
+    std::unique_ptr<UIRenderer> m_uiRenderer;
     Input m_input;
     SimpleFont m_font; // UI Font
 
@@ -43,6 +47,8 @@ private:
     // Lighting
     DirectionalLight m_dirLight;
     std::vector<PointLight> m_pointLights;
+
+    std::vector<DirectX::XMFLOAT3> m_lastPositions;
 
     std::chrono::steady_clock::time_point m_lastTime;
 

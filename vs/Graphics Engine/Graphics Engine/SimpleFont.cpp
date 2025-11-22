@@ -7,12 +7,16 @@ void SimpleFont::Initialize(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> fon
     m_fontTexture = fontTexture;
 }
 
-void SimpleFont::DrawString(Graphics& gfx, const std::string& text, float x, float y, float size, float color[4])
+ID3D11ShaderResourceView* SimpleFont::GetTexture() const
 {
-    // Removed early return to allow drawing debugging quads if texture is missing
-    // if (!m_fontTexture) return; 
+    return m_fontTexture.Get();
+}
 
-    int numChars = 0;
+std::vector<SpriteVertex> SimpleFont::GenerateVerticesForString(const std::string& text, float x, float y, float size, const float color[4]) const
+{
+    std::vector<SpriteVertex> vertices;
+    vertices.reserve(text.length() * 6);
+
     float curX = x;
     float curY = y;
 
@@ -21,7 +25,6 @@ void SimpleFont::DrawString(Graphics& gfx, const std::string& text, float x, flo
 
     for (char c : text)
     {
-        if (numChars >= MAX_CHARS) break;
         if (c == '\n')
         {
             curX = x;
@@ -36,39 +39,40 @@ void SimpleFont::DrawString(Graphics& gfx, const std::string& text, float x, flo
         float u = col * uvStep;
         float v = row * uvStep;
 
+        SpriteVertex v0, v1, v2, v3;
+
         // Top-Left
-        m_spriteBuffer[numChars * 6 + 0].pos = { curX, curY, 0.0f };
-        m_spriteBuffer[numChars * 6 + 0].uv = { u, v };
-        m_spriteBuffer[numChars * 6 + 0].color = { color[0], color[1], color[2], color[3] };
+        v0.pos = { curX, curY, 0.0f };
+        v0.uv = { u, v };
+        v0.color = { color[0], color[1], color[2], color[3] };
 
         // Top-Right
-        m_spriteBuffer[numChars * 6 + 1].pos = { curX + size, curY, 0.0f };
-        m_spriteBuffer[numChars * 6 + 1].uv = { u + uvStep, v };
-        m_spriteBuffer[numChars * 6 + 1].color = { color[0], color[1], color[2], color[3] };
+        v1.pos = { curX + size, curY, 0.0f };
+        v1.uv = { u + uvStep, v };
+        v1.color = { color[0], color[1], color[2], color[3] };
 
         // Bottom-Left
-        m_spriteBuffer[numChars * 6 + 2].pos = { curX, curY + size, 0.0f };
-        m_spriteBuffer[numChars * 6 + 2].uv = { u, v + uvStep };
-        m_spriteBuffer[numChars * 6 + 2].color = { color[0], color[1], color[2], color[3] };
-
-        // Bottom-Left
-        m_spriteBuffer[numChars * 6 + 3].pos = { curX, curY + size, 0.0f };
-        m_spriteBuffer[numChars * 6 + 3].uv = { u, v + uvStep };
-        m_spriteBuffer[numChars * 6 + 3].color = { color[0], color[1], color[2], color[3] };
-
-        // Top-Right
-        m_spriteBuffer[numChars * 6 + 4].pos = { curX + size, curY, 0.0f };
-        m_spriteBuffer[numChars * 6 + 4].uv = { u + uvStep, v };
-        m_spriteBuffer[numChars * 6 + 4].color = { color[0], color[1], color[2], color[3] };
+        v2.pos = { curX, curY + size, 0.0f };
+        v2.uv = { u, v + uvStep };
+        v2.color = { color[0], color[1], color[2], color[3] };
 
         // Bottom-Right
-        m_spriteBuffer[numChars * 6 + 5].pos = { curX + size, curY + size, 0.0f };
-        m_spriteBuffer[numChars * 6 + 5].uv = { u + uvStep, v + uvStep };
-        m_spriteBuffer[numChars * 6 + 5].color = { color[0], color[1], color[2], color[3] };
+        v3.pos = { curX + size, curY + size, 0.0f };
+        v3.uv = { u + uvStep, v + uvStep };
+        v3.color = { color[0], color[1], color[2], color[3] };
+        
+        // Triangle 1
+        vertices.push_back(v0);
+        vertices.push_back(v1);
+        vertices.push_back(v2);
+
+        // Triangle 2
+        vertices.push_back(v2);
+        vertices.push_back(v1);
+        vertices.push_back(v3);
 
         curX += charStep;
-        numChars++;
     }
 
-    gfx.DrawUI(m_spriteBuffer, numChars * 6, m_fontTexture.Get());
+    return vertices;
 }
