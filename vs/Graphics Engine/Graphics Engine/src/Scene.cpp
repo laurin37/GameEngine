@@ -202,6 +202,10 @@ void Scene::Update(float deltaTime, Input& input)
         for (const auto& obj : m_gameObjects)
         {
             if (obj.get() == bullet || obj.get() == m_player) continue; 
+            
+            // Skip gun to prevent false hits
+            Gun* gun = dynamic_cast<Gun*>(obj.get());
+            if (gun) continue; 
 
             if (PhysicsSystem::AABBIntersects(bullet->GetWorldBoundingBox(), obj->GetWorldBoundingBox()))
             {
