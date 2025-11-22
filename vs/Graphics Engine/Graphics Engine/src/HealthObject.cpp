@@ -39,21 +39,24 @@ void HealthObject::TakeDamage(float amount)
 
 void HealthObject::UpdateColor()
 {
-    // Interpolate color from green (1,0,0) to red (0,1,0) based on health percentage
-    // Health = 100% -> Green (0,1,0)
-    // Health = 0%   -> Red   (1,0,0)
+    // Interpolate color from green (0,1,0) to red (1,0,0) based on health percentage
     float healthRatio = m_currentHealth / m_maxHealth; // 1.0 = full health, 0.0 = no health
 
-    // Linear interpolation for R and G channels
-    // R: from 0 (green) to 1 (red)
-    // G: from 1 (green) to 0 (red)
-    XMFLOAT4 color;
-    color.x = 1.0f - healthRatio; // Red component
-    color.y = healthRatio;       // Green component
-    color.z = 0.0f;              // Blue component
-    color.w = 1.0f;              // Alpha component
+    // Clamp ratio
+    if (healthRatio < 0.0f) healthRatio = 0.0f;
+    if (healthRatio > 1.0f) healthRatio = 1.0f;
 
-    if (m_material) // Use inherited m_material directly
+    // Linear interpolation
+    // R: 0 -> 1 (as health decreases) => 1.0 - healthRatio
+    // G: 1 -> 0 (as health decreases) => healthRatio
+    // B: 0
+    XMFLOAT4 color;
+    color.x = 1.0f - healthRatio; // Red increases as health drops
+    color.y = healthRatio;       // Green decreases as health drops
+    color.z = 0.0f;
+    color.w = 1.0f;
+
+    if (m_material)
     {
         m_material->SetDiffuseColor(color);
     }

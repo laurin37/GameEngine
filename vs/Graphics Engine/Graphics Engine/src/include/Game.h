@@ -9,11 +9,12 @@
 #include "Mesh.h" 
 #include "SimpleFont.h"
 #include "UIRenderer.h"
-#include "Player.h"        // [NEW]
-#include "PhysicsSystem.h" // [NEW]
-#include "Bullet.h"        // Include Bullet header
-#include "Gun.h"           // Include Gun header
-#include "HealthObject.h"  // Include HealthObject header
+#include "Player.h"        
+#include "PhysicsSystem.h" 
+#include "Bullet.h"        
+#include "Gun.h"           
+#include "HealthObject.h"  
+#include "Crosshair.h" // Include Crosshair header
 #include <memory>
 #include <vector>
 #include <chrono>
@@ -71,6 +72,7 @@ private:
     // Physics & Player
     PhysicsSystem m_physics;
     Player* m_player = nullptr; // Non-owning pointer (memory owned by m_gameObjects)
+    std::unique_ptr<Crosshair> m_crosshair; // Crosshair object
 
     // Loop / Timing
     std::chrono::steady_clock::time_point m_lastTime;

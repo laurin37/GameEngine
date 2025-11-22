@@ -37,6 +37,9 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         m_renderer->Initialize(&m_graphics, m_assetManager.get(), WINDOW_WIDTH, WINDOW_HEIGHT);
         m_uiRenderer = std::make_unique<UIRenderer>(&m_graphics);
 
+        // Create Crosshair
+        m_crosshair = std::make_unique<Crosshair>();
+
         // Load assets and set up the scene
         LoadScene();
     }
@@ -404,9 +407,15 @@ void Game::Render()
     m_uiRenderer->EnableUIState();
 
     float color[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
-    m_uiRenderer->DrawString(m_font, "FPS: " + std::to_string(m_fps), 10.0f, 10.0f, 30.0f, color);
+    // m_uiRenderer->DrawString(m_font, "FPS: " + std::to_string(m_fps), 10.0f, 10.0f, 30.0f, color); // Disabled FPS
     m_uiRenderer->DrawString(m_font, "WASD to Move, Space to Jump", 10.0f, 40.0f, 20.0f, color);
     m_uiRenderer->DrawString(m_font, "Left Click to Shoot", 10.0f, 70.0f, 20.0f, color);
+
+    // Draw Crosshair
+    if (m_crosshair)
+    {
+        m_crosshair->Draw(m_uiRenderer.get(), m_font, 1280.0f, 720.0f); // Assuming 1280x720 resolution
+    }
 
 
     m_uiRenderer->DisableUIState();

@@ -112,14 +112,44 @@ void Player::Update(float deltaTime, Input& input, const std::vector<std::unique
     startPos = GetPosition();
     SetPosition(startPos.x, startPos.y + m_velocity.y * deltaTime, startPos.z);
     m_onGround = false; // Assume in air until collision
+    
+    // Safety check: if we fell too far, reset (simple respawn logic)
+    if (GetPosition().y < -20.0f) {
+        SetPosition(0.0f, 5.0f, 0.0f);
+        m_velocity = { 0.0f, 0.0f, 0.0f };
+    }
+
     for (const auto& obj : worldObjects) {
         if (obj.get() == this) continue;
-        if (PhysicsSystem::AABBIntersects(GetWorldBoundingBox(), obj->GetWorldBoundingBox())) {
-            // If falling down and hit something, we are on ground
-            if (m_velocity.y < 0) m_onGround = true;
+        
+        AABB playerBox = GetWorldBoundingBox();
+        AABB objBox = obj->GetWorldBoundingBox();
 
-            SetPosition(startPos.x, startPos.y, startPos.z); // Revert Y
-            m_velocity.y = 0; // Stop gravity accumulation
+        if (PhysicsSystem::AABBIntersects(playerBox, objBox)) {
+            // If falling down and hit something, we are on ground
+            if (m_velocity.y < 0) {
+                m_onGround = true;
+                m_velocity.y = 0; // Stop gravity accumulation
+                
+                // Snap to top of object to prevent sinking
+                // We want World Bottom of Player = Object Top
+                // World Bottom = World Center Y - Extents Y
+                // World Center Y = Position Y + OffsetY (from local center)
+                // So: Position Y + OffsetY - Extents Y = Object Top
+                // Position Y = Object Top + Extents Y - OffsetY
+                
+                float objectTop = objBox.center.y + objBox.extents.y;
+                float playerHalfHeight = playerBox.extents.y;
+                float currentY = GetPosition().y;
+                float centerOffset = playerBox.center.y - currentY;
+                
+                SetPosition(startPos.x, objectTop + playerHalfHeight - centerOffset, startPos.z);
+            }
+            else if (m_velocity.y > 0) {
+                // Hit something above (head bump)
+                m_velocity.y = 0;
+                SetPosition(startPos.x, startPos.y, startPos.z); // Revert Y
+            }
             break;
         }
     }
