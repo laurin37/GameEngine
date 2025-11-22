@@ -6,9 +6,12 @@
 #include "include/TextureLoader.h"
 #include "include/Graphics.h" 
 #include "include/Collision.h"
+#include "include/Player.h"
+#include "include/PhysicsSystem.h"
 
 Game::Game()
-    : m_dirLight{ {0.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f} }
+    : m_dirLight{ {0.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f} },
+    m_player(nullptr) // Initialize raw pointer
 {
 }
 
@@ -51,6 +54,7 @@ void Game::LoadScene()
 {
     // 1. Camera Setup
     m_camera = std::make_unique<Camera>();
+    // Position is now controlled by the Player, but we set a default here
     m_camera->SetPosition(0.0f, 5.0f, -15.0f);
     m_camera->AdjustRotation(0.3f, 0.0f, 0.0f);
 
@@ -59,21 +63,11 @@ void Game::LoadScene()
     m_dirLight.color = { 0.2f, 0.2f, 0.3f, 1.0f };
 
     m_pointLights.resize(MAX_POINT_LIGHTS);
-    m_pointLights[0].position = { 0.0f, 0.0f, 0.0f, 15.0f };
-    m_pointLights[0].color = { 1.0f, 0.0f, 0.0f, 2.0f };
-    m_pointLights[0].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f };
-
-    m_pointLights[1].position = { 0.0f, 0.0f, 0.0f, 15.0f };
-    m_pointLights[1].color = { 0.0f, 1.0f, 0.0f, 2.0f };
-    m_pointLights[1].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f };
-
-    m_pointLights[2].position = { 0.0f, 0.0f, 0.0f, 15.0f };
-    m_pointLights[2].color = { 0.0f, 0.0f, 1.0f, 2.0f };
-    m_pointLights[2].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f };
-
-    m_pointLights[3].position = { 0.0f, 0.0f, 0.0f, 15.0f };
-    m_pointLights[3].color = { 1.0f, 0.5f, 0.0f, 2.0f };
-    m_pointLights[3].attenuation = { 0.2f, 0.2f, 0.0f, 0.0f };
+    // Setup point lights (Red, Green, Blue, Orange)
+    m_pointLights[0] = { {0.0f, 0.0f, 0.0f, 15.0f}, {1.0f, 0.0f, 0.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
+    m_pointLights[1] = { {0.0f, 0.0f, 0.0f, 15.0f}, {0.0f, 1.0f, 0.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
+    m_pointLights[2] = { {0.0f, 0.0f, 0.0f, 15.0f}, {0.0f, 0.0f, 1.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
+    m_pointLights[3] = { {0.0f, 0.0f, 0.0f, 15.0f}, {1.0f, 0.5f, 0.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
 
     // 3. Load Basic Assets
     auto meshCube = m_assetManager->LoadMesh("Assets/Models/basic/cube.obj");
@@ -100,11 +94,22 @@ void Game::LoadScene()
     auto matGlowing = std::make_shared<Material>(DirectX::XMFLOAT4(0.2f, 1.0f, 1.0f, 1.0f), 1.0f, 128.0f);
 
     // 6. Build Scene
+
+    // --- Create Player ---
+    // We use a unique_ptr to create it, then store the raw pointer in m_player for logic access,
+    // and finally move the unique_ptr into m_gameObjects so it is owned by the scene and rendered automatically.
+    auto playerPtr = std::make_unique<Player>(meshCylinder.get(), matPillar, m_camera.get());
+    playerPtr->SetPosition(0.0f, 5.0f, -5.0f);
+    m_player = playerPtr.get();
+    m_gameObjects.push_back(std::move(playerPtr));
+
+    // --- Create Floor ---
     auto floor = std::make_unique<GameObject>(meshCube.get(), matFloor);
     floor->SetPosition(0.0f, -1.0f, 0.0f);
     floor->SetScale(20.0f, 0.1f, 20.0f);
     m_gameObjects.push_back(std::move(floor));
 
+    // --- Create Pillars ---
     float pillarDist = 6.0f;
     float pillarPositions[4][2] = { {pillarDist, pillarDist}, {pillarDist, -pillarDist}, {-pillarDist, pillarDist}, {-pillarDist, -pillarDist} };
 
@@ -121,17 +126,20 @@ void Game::LoadScene()
         m_gameObjects.push_back(std::move(roof));
     }
 
+    // --- Create Pedestal ---
     auto pedestal = std::make_unique<GameObject>(meshCube.get(), matPillar);
     pedestal->SetPosition(0.0f, 0.0f, 0.0f);
     pedestal->SetScale(2.0f, 1.0f, 2.0f);
     m_gameObjects.push_back(std::move(pedestal));
 
+    // --- Create Artifact (Rotating Torus) ---
     auto artifact = std::make_unique<GameObject>(meshTorus.get(), matGold);
     artifact->SetPosition(0.0f, 2.0f, 0.0f);
     artifact->SetScale(1.5f, 1.5f, 1.5f);
     artifact->SetRotation(DirectX::XM_PIDIV2, 0.0f, 0.0f);
     m_gameObjects.push_back(std::move(artifact));
 
+    // --- Create Floating Orbs ---
     for (int i = 0; i < 4; i++)
     {
         auto orb = std::make_unique<GameObject>(meshSphere.get(), matGlowing);
@@ -158,13 +166,14 @@ void Game::Run()
         catch (const std::exception& e)
         {
             MessageBoxA(nullptr, e.what(), "Runtime Error", MB_OK | MB_ICONERROR);
-            break; // Exit game loop on error
+            break;
         }
     }
 }
 
 void Game::Update(float deltaTime)
 {
+    // --- FPS Calculation ---
     m_frameCount++;
     m_timeAccum += deltaTime;
     if (m_timeAccum >= 1.0f)
@@ -174,41 +183,33 @@ void Game::Update(float deltaTime)
         m_timeAccum -= 1.0f;
     }
 
-    // --- Store last "safe" positions before update ---
-    m_lastPositions.resize(m_gameObjects.size());
-    for (size_t i = 0; i < m_gameObjects.size(); ++i)
-    {
-        m_lastPositions[i] = m_gameObjects[i]->GetPosition();
-    }
-
     m_input.Update();
-
     if (m_input.IsKeyDown(VK_ESCAPE)) PostQuitMessage(0);
 
-    const float moveSpeed = 10.0f * deltaTime;
-    const float rotSpeed = 0.5f * deltaTime;
+    // --- UPDATE PLAYER ---
+    // The Player class now handles Input (WASD) and Camera Rotation
+    if (m_player)
+    {
+        m_player->Update(deltaTime, m_input, m_gameObjects);
+    }
 
-    if (m_input.IsKeyDown('W')) m_camera->AdjustPosition(0.0f, 0.0f, moveSpeed);
-    if (m_input.IsKeyDown('S')) m_camera->AdjustPosition(0.0f, 0.0f, -moveSpeed);
-    if (m_input.IsKeyDown('A')) m_camera->AdjustPosition(-moveSpeed, 0.0f, 0.0f);
-    if (m_input.IsKeyDown('D')) m_camera->AdjustPosition(moveSpeed, 0.0f, 0.0f);
-    if (m_input.IsKeyDown(VK_SPACE)) m_camera->AdjustPosition(0.0f, moveSpeed, 0.0f);
-    if (m_input.IsKeyDown(VK_SHIFT)) m_camera->AdjustPosition(0.0f, -moveSpeed, 0.0f);
-
-    float mouseDx = static_cast<float>(m_input.GetMouseDeltaX()) * rotSpeed;
-    float mouseDy = static_cast<float>(m_input.GetMouseDeltaY()) * rotSpeed;
-    m_camera->AdjustRotation(mouseDy, mouseDx, 0.0f);
-
+    // --- ANIMATION LOGIC (Objects) ---
     static float time = 0.0f;
     time += deltaTime;
 
-    if (m_gameObjects.size() > 10)
+    // Rotate the central artifact (Assuming it's at index 11, after Player(0)+Floor(1)+4Pillars(2-5)+4Roofs(6-9)+Pedestal(10) = 11)
+    // Note: Because we inserted Player at index 0, all indices shifted by 1 compared to previous code.
+    // Previous Index 10 (Pedestal) is now likely 11. Previous 11 (Artifact) is now 12.
+    // To be safe, you might want to store these as specific pointers, but keeping the loop logic for now:
+    if (m_gameObjects.size() > 11)
     {
-        m_gameObjects[10]->SetRotation(DirectX::XM_PIDIV2, time, 0.0f);
+        // Rotate Artifact
+        m_gameObjects[11]->SetRotation(DirectX::XM_PIDIV2, time, 0.0f);
     }
 
-    if (m_gameObjects.size() >= 14)
+    if (m_gameObjects.size() >= 16)
     {
+        // Animate Orbs
         for (int i = 0; i < 4; i++)
         {
             float offset = i * (DirectX::XM_PI / 2.0f);
@@ -217,7 +218,8 @@ void Game::Update(float deltaTime)
             float z = cos(time + offset) * radius;
             float y = 2.0f + sin(time * 2.0f + offset) * 0.5f;
 
-            m_gameObjects[11 + i]->SetPosition(x, y, z);
+            // Indices shifted by +1 due to player
+            m_gameObjects[12 + i]->SetPosition(x, y, z);
 
             m_pointLights[i].position.x = x;
             m_pointLights[i].position.y = y;
@@ -225,40 +227,14 @@ void Game::Update(float deltaTime)
         }
     }
 
-    UpdatePhysics(deltaTime);
-}
-
-void Game::UpdatePhysics(float deltaTime)
-{
-    // Simple N^2 collision detection
-    for (size_t i = 0; i < m_gameObjects.size(); ++i)
-    {
-        for (size_t j = i + 1; j < m_gameObjects.size(); ++j)
-        {
-            auto& objA = m_gameObjects[i];
-            auto& objB = m_gameObjects[j];
-
-            // Skip check if one of the objects is the floor
-            if (i == 0 || j == 0) continue;
-
-            AABB boxA = objA->GetWorldBoundingBox();
-            AABB boxB = objB->GetWorldBoundingBox();
-
-            if (AABBIntersects(boxA, boxB))
-            {
-                // Collision detected, revert BOTH to last safe position
-                const auto& posA = m_lastPositions[i];
-                objA->SetPosition(posA.x, posA.y, posA.z);
-
-                const auto& posB = m_lastPositions[j];
-                objB->SetPosition(posB.x, posB.y, posB.z);
-            }
-        }
-    }
+    // --- UPDATE PHYSICS SYSTEM ---
+    // Handles gravity and collisions for non-player objects (if any are dynamic)
+    m_physics.Update(m_gameObjects, deltaTime);
 }
 
 void Game::Render()
 {
+    // RenderScene handles the player automatically because the player is inside m_gameObjects
     m_renderer->RenderFrame(*m_camera, m_gameObjects, m_dirLight, m_pointLights);
     m_renderer->RenderDebug(*m_camera, m_gameObjects);
 
@@ -266,6 +242,7 @@ void Game::Render()
 
     float color[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
     m_uiRenderer->DrawString(m_font, "FPS: " + std::to_string(m_fps), 10.0f, 10.0f, 30.0f, color);
+    m_uiRenderer->DrawString(m_font, "WASD to Move, Space to Jump", 10.0f, 40.0f, 20.0f, color);
 
     m_uiRenderer->DisableUIState();
 

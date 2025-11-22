@@ -6,15 +6,16 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include "GameObject.h"
-#include "Mesh.h" // Added to support vector<unique_ptr<Mesh>>
+#include "Mesh.h" 
 #include "SimpleFont.h"
 #include "UIRenderer.h"
+#include "Player.h"        // [NEW]
+#include "PhysicsSystem.h" // [NEW]
 #include <memory>
 #include <vector>
 #include <chrono>
 
 class AssetManager; // Forward Declaration
-class UIRenderer;   // Forward Declaration
 
 class Game
 {
@@ -29,30 +30,33 @@ private:
     void Update(float deltaTime);
     void Render();
     void LoadScene();
-    void UpdatePhysics(float deltaTime);
 
+    // System Objects
     Window m_window;
     Graphics m_graphics;
+    Input m_input;
+
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<AssetManager> m_assetManager;
     std::unique_ptr<UIRenderer> m_uiRenderer;
-    Input m_input;
-    SimpleFont m_font; // UI Font
 
+    // Scene Objects
     std::unique_ptr<Camera> m_camera;
+    SimpleFont m_font;
 
-    // The actual objects in the scene
+    // The actual objects in the scene (Owns the Player memory too)
     std::vector<std::unique_ptr<GameObject>> m_gameObjects;
 
     // Lighting
     DirectionalLight m_dirLight;
     std::vector<PointLight> m_pointLights;
 
-    std::vector<DirectX::XMFLOAT3> m_lastPositions;
+    // Physics & Player
+    PhysicsSystem m_physics;
+    Player* m_player = nullptr; // Non-owning pointer (memory owned by m_gameObjects)
 
+    // Loop / Timing
     std::chrono::steady_clock::time_point m_lastTime;
-
-    // FPS Counter
     int m_fps = 0;
     int m_frameCount = 0;
     float m_timeAccum = 0.0f;
