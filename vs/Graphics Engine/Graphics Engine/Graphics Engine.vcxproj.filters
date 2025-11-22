@@ -150,6 +150,12 @@
     <None Include="Assets\Shaders\UIPixelShader.hlsl" />
     <None Include="Assets\Shaders\UIVertexShader.hlsl" />
     <None Include="Assets\Shaders\Debug.hlsl" />
+    <None Include="Assets\Models\monkey.mtl" />
+    <None Include="Assets\Models\basic\ball.mtl" />
+    <None Include="Assets\Models\basic\capsule.mtl" />
+    <None Include="Assets\Models\basic\ball.obj" />
+    <None Include="Assets\Models\basic\capsule.obj" />
+    <None Include="Assets\Models\monkey.obj" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Textures\blue_metal_plate_diff_4k.jpg">

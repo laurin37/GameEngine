@@ -168,12 +168,15 @@
     <ClInclude Include="src\include\Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\Models\basic\ball.mtl" />
+    <None Include="Assets\Models\basic\capsule.mtl" />
     <None Include="Assets\Models\interieur.obj">
       <FileType>Document</FileType>
     </None>
     <None Include="Assets\Models\basic\cone.mtl" />
     <None Include="Assets\Models\basic\cube.mtl" />
     <None Include="Assets\Models\basic\cylinder.mtl" />
+    <None Include="Assets\Models\monkey.mtl" />
     <None Include="Assets\Models\windmill.obj">
       <FileType>Document</FileType>
     </None>
@@ -243,6 +246,17 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Models\basic\ball.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\basic\capsule.obj">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Models\monkey.obj">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
