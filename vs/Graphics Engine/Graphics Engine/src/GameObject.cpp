@@ -15,17 +15,13 @@ GameObject::GameObject(Mesh* mesh, std::shared_ptr<Material> material)
 void GameObject::SetMesh(Mesh* mesh)
 {
     m_mesh = mesh;
-    WCHAR buffer[256];
-    swprintf_s(buffer, L"GameObject::SetMesh - Mesh address: 0x%p\n", mesh);
-    OutputDebugString(buffer);
+    LOG_DEBUG(std::format("GameObject::SetMesh - Mesh address: 0x{:p}", static_cast<void*>(mesh)));
 }
 
 void GameObject::SetMaterial(std::shared_ptr<Material> material)
 {
     m_material = material;
-    WCHAR buffer[256];
-    swprintf_s(buffer, L"GameObject::SetMaterial - Material address: 0x%p\n", material.get());
-    OutputDebugString(buffer);
+    LOG_DEBUG(std::format("GameObject::SetMaterial - Material address: 0x{:p}", static_cast<void*>(material.get())));
 }
 
 void GameObject::Draw(ID3D11DeviceContext* context, ID3D11Buffer* psMaterialConstantBuffer) const

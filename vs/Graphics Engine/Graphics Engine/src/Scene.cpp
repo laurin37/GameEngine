@@ -255,7 +255,7 @@ void Scene::Update(float deltaTime, Input& input)
                 HealthObject* healthObj = dynamic_cast<HealthObject*>(obj.get());
                 if (healthObj)
                 {
-                    OutputDebugString(L"Bullet hit HealthObject!\n");
+                    LOG_DEBUG("Bullet hit HealthObject!");
                     healthObj->TakeDamage(bullet->GetDamage());
                     bullet->SetActive(false); 
                     break; 

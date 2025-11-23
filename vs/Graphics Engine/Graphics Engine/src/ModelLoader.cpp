@@ -5,7 +5,7 @@
 #include <sstream>
 #include <map>
 #include <tuple>
-#include <windows.h> // For OutputDebugStringA
+#include <windows.h>
 
 // A key to uniquely identify a vertex by its attribute indices
 using VertexKey = std::tuple<int, int, int>;
@@ -185,9 +185,9 @@ std::unique_ptr<Mesh> ModelLoader::Load(ID3D11Device* device, const std::string&
         DirectX::XMStoreFloat3(&v.tangent, tangent);
     }
 
+    LOG_INFO("Loaded model: " + filePath + ", Vertices: " + std::to_string(finalVertices.size()) + 
+             ", Indices: " + std::to_string(finalIndices.size()));
 
-    std::string debug_msg = "Loaded model: " + filePath + ", Vertices: " + std::to_string(finalVertices.size()) + ", Indices: " + std::to_string(finalIndices.size()) + "\n";
-    OutputDebugStringA(debug_msg.c_str());
 
     if (finalVertices.empty() || finalIndices.empty())
     {

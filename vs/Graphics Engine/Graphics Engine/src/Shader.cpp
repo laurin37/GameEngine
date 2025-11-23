@@ -19,8 +19,8 @@ void CompileShader(const std::wstring& filename, const std::string& entryPoint, 
     {
         if (errorBlob)
         {
-            OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-            // Or throw an exception with the error message
+            LOG_ERROR(std::string("Shader compilation failed:\n") + 
+                     (char*)errorBlob->GetBufferPointer());
             throw std::runtime_error("Shader compilation failed.");
         }
         else

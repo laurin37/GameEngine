@@ -138,6 +138,7 @@
     <ClCompile Include="src\Gun.cpp" />
     <ClCompile Include="src\HealthObject.cpp" />
     <ClCompile Include="src\Input.cpp" />
+    <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Material.cpp" />
     <ClCompile Include="src\Mesh.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="src\include\Gun.h" />
     <ClInclude Include="src\include\HealthObject.h" />
     <ClInclude Include="src\include\Input.h" />
+    <ClInclude Include="src\include\Logger.h" />
     <ClInclude Include="src\include\Material.h" />
     <ClInclude Include="src\include\Mesh.h" />
     <ClInclude Include="src\include\MeshUtils.h" />

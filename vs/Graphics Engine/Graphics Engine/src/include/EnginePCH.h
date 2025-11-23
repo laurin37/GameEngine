@@ -5,6 +5,7 @@
 #include <string>    // For std::string
 #include <format>    // For std::format (C++20)
 #include <comdef.h>  // For _com_error
+#include "Logger.h"  // Logging system
 
 inline void ThrowIfFailed(HRESULT hr)
 {
