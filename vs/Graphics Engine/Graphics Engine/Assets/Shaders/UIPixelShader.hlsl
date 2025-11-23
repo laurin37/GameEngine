@@ -12,8 +12,8 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
     float4 texColor = g_texture.Sample(g_sampler, input.uv);
     
-    // DEBUG: If texture alpha is missing, draw RED block so we see SOMETHING.
-    if (texColor.a < 0.1) return float4(1, 0, 0, 0.5) * input.color; 
+    // Debug line removed
+    // if (texColor.a < 0.1) return float4(1, 0, 0, 0.5) * input.color; 
     
     return texColor * input.color;
 }
