@@ -215,6 +215,7 @@ void Scene::Update(float deltaTime, Input& input)
     if (m_timeAccum >= 1.0f)
     {
         m_fps = m_frameCount;
+        LOG_INFO(std::format("FPS: {}", m_fps));
         m_frameCount = 0;
         m_timeAccum -= 1.0f;
     }

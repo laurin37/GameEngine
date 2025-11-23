@@ -75,5 +75,7 @@ float Graphics::GetScreenHeight() const { return m_screenHeight; }
 
 void Graphics::Present()
 {
-    ThrowIfFailed(m_swapChain->Present(1, 0));
+    // Present(0, 0) = VSync OFF (uncapped FPS)
+    // Present(1, 0) = VSync ON (capped to monitor refresh rate)
+    ThrowIfFailed(m_swapChain->Present(0, 0));
 }

@@ -38,19 +38,31 @@ void Renderer::RenderFrame(
     ID3D11DepthStencilView* dsv = m_graphics->GetDepthStencilView().Get();
     ID3D11RenderTargetView* rtv = m_graphics->GetRenderTargetView().Get();
     
+    // CRITICAL: Unbind all shader resources at the start of the frame
+    // This prevents issues from resources still bound from the previous frame
+    ID3D11ShaderResourceView* nullSRVs[3] = { nullptr, nullptr, nullptr };
+    context->PSSetShaderResources(0, 3, nullSRVs);
+
     // 1. Render shadows first, as it uses its own render targets
     DirectX::XMMATRIX lightView = DirectX::XMMatrixIdentity();
     DirectX::XMMATRIX lightProj = DirectX::XMMatrixIdentity();
     RenderShadowPass(gameObjects, lightView, lightProj);
 
-    // 2. Set main back buffer as render target and clear it
+    // 2. Unbind shader resources again before setting main render targets
+    context->PSSetShaderResources(0, 3, nullSRVs);
+
+    // 3. Set main back buffer as render target and clear it
     context->OMSetRenderTargets(1, &rtv, dsv);
     const float clearColor[] = { 0.0f, 0.05f, 0.1f, 1.0f };
     context->ClearRenderTargetView(rtv, clearColor);
     context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-    // 3. Render scene directly to back buffer
+    // 4. Render scene directly to back buffer
     RenderMainPass(camera, gameObjects, lightView * lightProj, dirLight, pointLights);
+
+    // 5. CRITICAL: Unbind all shader resources at the end of the frame
+    // This ensures a clean state for the next frame and prevents warnings
+    context->PSSetShaderResources(0, 3, nullSRVs);
 }
 
 void Renderer::InitPipeline(int width, int height)
