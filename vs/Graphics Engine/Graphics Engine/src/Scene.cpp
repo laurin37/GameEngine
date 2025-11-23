@@ -21,12 +21,23 @@ Scene::~Scene() = default;
 
 void Scene::Load()
 {
-    // 1. Camera Setup
+    SetupCamera();
+    SetupLighting();
+    LoadAssets();
+    CreateMaterials();
+    SpawnSceneObjects();
+    InitializeUI();
+}
+
+void Scene::SetupCamera()
+{
     m_camera = std::make_unique<Camera>();
     m_camera->SetPosition(0.0f, 5.0f, -15.0f);
     m_camera->AdjustRotation(0.3f, 0.0f, 0.0f);
+}
 
-    // 2. Setup Lights
+void Scene::SetupLighting()
+{
     m_dirLight.direction = { 0.5f, -0.7f, 0.5f, 0.0f };
     m_dirLight.color = { 0.2f, 0.2f, 0.3f, 1.0f };
 
@@ -36,63 +47,73 @@ void Scene::Load()
     m_pointLights[1] = { {0.0f, 2.0f, 0.0f, 15.0f}, {0.5f, 1.0f, 0.5f, 2.0f}, {0.5f, 0.05f, 0.005f, 0.0f} };  // Green-ish
     m_pointLights[2] = { {0.0f, 2.0f, 0.0f, 15.0f}, {0.5f, 0.5f, 1.0f, 2.0f}, {0.5f, 0.05f, 0.005f, 0.0f} };  // Blue-ish
     m_pointLights[3] = { {0.0f, 2.0f, 0.0f, 15.0f}, {1.0f, 0.8f, 0.5f, 2.0f}, {0.5f, 0.05f, 0.005f, 0.0f} };  // Orange-ish
+}
 
-    // 3. Load Basic Assets
-    std::shared_ptr<Mesh> meshCube = m_assetManager->LoadMesh("Assets/Models/basic/cube.obj");
-    std::shared_ptr<Mesh> meshCylinder = m_assetManager->LoadMesh("Assets/Models/basic/cylinder.obj");
-    std::shared_ptr<Mesh> meshCone = m_assetManager->LoadMesh("Assets/Models/basic/cone.obj");
-    std::shared_ptr<Mesh> meshSphere = m_assetManager->LoadMesh("Assets/Models/basic/sphere.obj");
-    std::shared_ptr<Mesh> meshTorus = m_assetManager->LoadMesh("Assets/Models/basic/torus.obj");
+void Scene::LoadAssets()
+{
+    // Load meshes
+    m_meshCube = m_assetManager->LoadMesh("Assets/Models/basic/cube.obj");
+    m_meshCylinder = m_assetManager->LoadMesh("Assets/Models/basic/cylinder.obj");
+    m_meshCone = m_assetManager->LoadMesh("Assets/Models/basic/cone.obj");
+    m_meshSphere = m_assetManager->LoadMesh("Assets/Models/basic/sphere.obj");
+    m_meshTorus = m_assetManager->LoadMesh("Assets/Models/basic/torus.obj");
 
-    // 4. Load Textures
+    // Load textures
     auto texWood = m_assetManager->LoadTexture(L"Assets/Textures/pine_bark_diff_4k.jpg");
     auto normWood = m_assetManager->LoadTexture(L"Assets/Textures/pine_bark_disp_4k.png");
     auto texMetal = m_assetManager->LoadTexture(L"Assets/Textures/blue_metal_plate_diff_4k.jpg");
     auto normMetal = m_assetManager->LoadTexture(L"Assets/Textures/blue_metal_plate_disp_4k.png");
 
-    // --- GENERATE DEBUG FONT ---
+    // Generate debug font
     if (m_graphics) {
         auto debugFontTex = TextureLoader::CreateDebugFont(m_graphics->GetDevice().Get(), m_graphics->GetContext().Get());
         m_font.Initialize(debugFontTex);
     }
+    
+    // Store materials will reference these textures
+    // (We'll create materials in CreateMaterials() using these textures via a temporary approach)
+    // For now, we'll recreate material initialization there.
+}
 
-    // 5. Create Materials
-    auto matFloor = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.2f, 10.0f, texWood, normWood);
-    auto matPillar = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.8f, 32.0f, texMetal, normMetal);
-    auto matRoof = std::make_shared<Material>(DirectX::XMFLOAT4(0.8f, 0.1f, 0.1f, 1.0f), 0.8f, 32.0f);
-    auto matGold = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 0.8f, 0.0f, 1.0f), 1.0f, 64.0f);
-    auto matGlowing = std::make_shared<Material>(DirectX::XMFLOAT4(0.2f, 1.0f, 1.0f, 1.0f), 1.0f, 128.0f);
+void Scene::CreateMaterials()
+{
+    // Load textures again temporarily (will be optimized with resource caching later)
+    auto texWood = m_assetManager->LoadTexture(L"Assets/Textures/pine_bark_diff_4k.jpg");
+    auto normWood = m_assetManager->LoadTexture(L"Assets/Textures/pine_bark_disp_4k.png");
+    auto texMetal = m_assetManager->LoadTexture(L"Assets/Textures/blue_metal_plate_diff_4k.jpg");
+    auto normMetal = m_assetManager->LoadTexture(L"Assets/Textures/blue_metal_plate_disp_4k.png");
+    
+    m_matFloor = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.2f, 10.0f, texWood, normWood);
+    m_matPillar = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.8f, 32.0f, texMetal, normMetal);
+    m_matRoof = std::make_shared<Material>(DirectX::XMFLOAT4(0.8f, 0.1f, 0.1f, 1.0f), 0.8f, 32.0f);
+    m_matGold = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 0.8f, 0.0f, 1.0f), 1.0f, 64.0f);
+    m_matGlowing = std::make_shared<Material>(DirectX::XMFLOAT4(0.2f, 1.0f, 1.0f, 1.0f), 1.0f, 128.0f);
+    
+    // Store bullet and health object materials
+    m_bulletMesh = m_meshSphere;
+    m_bulletMaterial = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f), 1.0f, 64.0f);
+    m_healthObjectMesh = m_meshCube;
+    m_healthObjectMaterial = std::make_shared<Material>(DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), 0.5f, 16.0f);
+}
 
-    // 6. Build Scene
-
+void Scene::SpawnSceneObjects()
+{
     // --- Create Player ---
-    auto playerPtr = std::make_unique<Player>(meshCylinder.get(), matPillar, m_camera.get());
+    auto playerPtr = std::make_unique<Player>(m_meshCylinder.get(), m_matPillar, m_camera.get());
     playerPtr->SetPosition(0.0f, 5.0f, -5.0f);
     m_player = playerPtr.get();
     m_gameObjects.push_back(std::move(playerPtr));
 
     // --- Create Player's Gun ---
-    auto gunMesh = meshCube; 
-    auto gunMaterial = matPillar; 
-
-    auto gunPtr = std::make_unique<Gun>(gunMesh.get(), gunMaterial);
+    auto gunPtr = std::make_unique<Gun>(m_meshCube.get(), m_matPillar);
     gunPtr->SetPosition(m_player->GetPosition().x + 0.5f, m_player->GetPosition().y + 0.5f, m_player->GetPosition().z + 0.5f);
     gunPtr->SetScale(0.2f, 0.2f, 0.8f);
-    // No collider for gun - it should not block anything
-
+    
     m_player->SetGun(gunPtr.get()); 
     gunPtr->SetOwner(m_player); 
     m_gameObjects.push_back(std::move(gunPtr)); 
 
-    // --- Store Bullet and HealthObject assets ---
-    m_bulletMesh = meshSphere; 
-    m_bulletMaterial = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f), 1.0f, 64.0f); 
-
-    m_healthObjectMesh = meshCube; 
-    m_healthObjectMaterial = std::make_shared<Material>(DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), 0.5f, 16.0f); 
-
     // --- Create HealthObjects ---
-    // Positioned away from pillars (pillars are at ±6, ±6)
     auto healthObj1 = std::make_unique<HealthObject>(100.0f, DirectX::XMFLOAT3(10.0f, 1.0f, 0.0f));
     healthObj1->SetMesh(m_healthObjectMesh.get());
     healthObj1->SetMaterial(std::make_shared<Material>(*m_healthObjectMaterial));
@@ -106,10 +127,10 @@ void Scene::Load()
     m_gameObjects.push_back(std::move(healthObj2));
 
     // --- Create Floor ---
-    auto floor = std::make_unique<GameObject>(meshCube.get(), matFloor);
+    auto floor = std::make_unique<GameObject>(m_meshCube.get(), m_matFloor);
     floor->SetPosition(0.0f, -1.0f, 0.0f);
     floor->SetScale(100.0f, 0.1f, 100.0f);
-    floor->GenerateCollider(); // Auto-generate collision from cube mesh
+    floor->GenerateCollider();
     m_gameObjects.push_back(std::move(floor));
 
     // --- Create Pillars ---
@@ -118,53 +139,54 @@ void Scene::Load()
 
     for (int i = 0; i < 4; i++)
     {
-        auto pillar = std::make_unique<GameObject>(meshCylinder.get(), matPillar);
+        auto pillar = std::make_unique<GameObject>(m_meshCylinder.get(), m_matPillar);
         pillar->SetPosition(pillarPositions[i][0], 1.0f, pillarPositions[i][1]);
         pillar->SetScale(1.0f, 2.0f, 1.0f);
-        pillar->GenerateCollider(); // Auto-generate collision
+        pillar->GenerateCollider();
         m_gameObjects.push_back(std::move(pillar));
 
-        auto roof = std::make_unique<GameObject>(meshCone.get(), matRoof);
+        auto roof = std::make_unique<GameObject>(m_meshCone.get(), m_matRoof);
         roof->SetPosition(pillarPositions[i][0], 3.5f, pillarPositions[i][1]);
         roof->SetScale(1.5f, 1.0f, 1.5f);
-        roof->GenerateCollider(); // Auto-generate collision
+        roof->GenerateCollider();
         m_gameObjects.push_back(std::move(roof));
     }
 
     // --- Create Pedestal ---
-    auto pedestal = std::make_unique<GameObject>(meshCube.get(), matPillar);
+    auto pedestal = std::make_unique<GameObject>(m_meshCube.get(), m_matPillar);
     pedestal->SetPosition(0.0f, 0.0f, 0.0f);
     pedestal->SetScale(2.0f, 1.0f, 2.0f);
     pedestal->GenerateCollider();
     m_gameObjects.push_back(std::move(pedestal));
 
     // --- Create Artifact (Rotating Torus) ---
-    auto artifact = std::make_unique<GameObject>(meshTorus.get(), matGold);
+    auto artifact = std::make_unique<GameObject>(m_meshTorus.get(), m_matGold);
     artifact->SetPosition(0.0f, 2.0f, 0.0f);
     artifact->SetScale(1.5f, 1.5f, 1.5f);
     artifact->GenerateCollider();
     artifact->SetRotation(DirectX::XM_PIDIV2, 0.0f, 0.0f);
-    artifact->SetName(L"Artifact"); // CRITICAL: Name needed for animation lookup
+    artifact->SetName(L"Artifact");
     m_gameObjects.push_back(std::move(artifact));
 
     // --- Create Floating Orbs ---
-    float orbRadius = 3.0f; // Orbit radius around torus
+    float orbRadius = 3.0f;
     for (int i = 0; i < 4; i++)
     {
-        auto orb = std::make_unique<GameObject>(meshSphere.get(), matGlowing);
+        auto orb = std::make_unique<GameObject>(m_meshSphere.get(), m_matGlowing);
         orb->SetScale(0.5f, 0.5f, 0.5f);
         
-        // Initial position in circle around torus
         float angle = (DirectX::XM_2PI / 4.0f) * i;
         float x = orbRadius * cosf(angle);
         float z = orbRadius * sinf(angle);
-        orb->SetPosition(x, 2.0f, z); // Same height as torus
-        orb->SetName(L"Orb"); // Mark as orb for animation
+        orb->SetPosition(x, 2.0f, z);
+        orb->SetName(L"Orb");
         
         m_gameObjects.push_back(std::move(orb));
     }
+}
 
-    // Create Crosshair
+void Scene::InitializeUI()
+{
     m_crosshair = std::make_unique<Crosshair>();
 }
 

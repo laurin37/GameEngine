@@ -30,6 +30,14 @@ public:
 
 private:
     void AddBulletInternal(std::unique_ptr<Bullet> bullet);
+    
+    // Scene loading helpers
+    void SetupCamera();
+    void SetupLighting();
+    void LoadAssets();
+    void CreateMaterials();
+    void SpawnSceneObjects();
+    void InitializeUI();
 
     AssetManager* m_assetManager; // Non-owning
     Graphics* m_graphics;         // Non-owning (for creating debug font texture if needed, though usually AssetManager handles assets)
@@ -37,6 +45,20 @@ private:
     // Scene Objects
     std::unique_ptr<Camera> m_camera;
     SimpleFont m_font;
+
+    // Shared assets loaded in LoadAssets()
+    std::shared_ptr<Mesh> m_meshCube;
+    std::shared_ptr<Mesh> m_meshCylinder;
+    std::shared_ptr<Mesh> m_meshCone;
+    std::shared_ptr<Mesh> m_meshSphere;
+    std::shared_ptr<Mesh> m_meshTorus;
+
+    // Shared materials created in CreateMaterials()
+    std::shared_ptr<Material> m_matFloor;
+    std::shared_ptr<Material> m_matPillar;
+    std::shared_ptr<Material> m_matRoof;
+    std::shared_ptr<Material> m_matGold;
+    std::shared_ptr<Material> m_matGlowing;
 
     // Bullet and HealthObject assets
     std::shared_ptr<Mesh> m_bulletMesh;
