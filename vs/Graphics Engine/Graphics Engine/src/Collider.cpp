@@ -26,10 +26,13 @@ void Collider::GenerateFromMesh(const Mesh* mesh, ColliderType colliderType)
             break;
             
         case ColliderType::Sphere: {
-            // Generate sphere, but store as AABB for compatibility
-            MeshUtils::Sphere sphere = MeshUtils::CalculateBoundingSphere(mesh);
-            m_localAABB.center = sphere.center;
-            m_localAABB.extents = { sphere.radius, sphere.radius, sphere.radius };
+            // Generate sphere from AABB max extent for tighter fit
+            // (CalculateBoundingSphere uses diagonal which is too large for sphere meshes)
+            AABB aabb = MeshUtils::CalculateAABB(mesh);
+            float radius = (std::max)({aabb.extents.x, aabb.extents.y, aabb.extents.z});
+            
+            m_localAABB.center = aabb.center;
+            m_localAABB.extents = { radius, radius, radius };
             break;
         }
     }

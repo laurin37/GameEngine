@@ -40,7 +40,7 @@ void Player::Update(float deltaTime, Input& input, const std::vector<std::unique
 void Player::HandleInput(Input& input, float deltaTime)
 {
     // Mouse look (rotation)
-    float mouseSens = 0.002f;
+    float mouseSens = 0.001f;
     int dx = input.GetMouseDeltaX();
     int dy = input.GetMouseDeltaY();
 

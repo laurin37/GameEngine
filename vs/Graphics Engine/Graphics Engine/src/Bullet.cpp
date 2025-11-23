@@ -11,10 +11,6 @@ Bullet::Bullet()
       m_age(0.0f) // Initialize age
 {
     SetName(L"Bullet"); // Use SetName()
-    AABB bulletBox;
-    bulletBox.center = { 0.0f, 0.0f, 0.0f };
-    bulletBox.extents = { 0.1f, 0.1f, 0.1f }; // Match the visual scale
-    SetBoundingBox(bulletBox);
 }
 
 Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, float speed, float damage)
@@ -27,10 +23,6 @@ Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, float speed,
 {
     m_transform.SetPosition(position.x, position.y, position.z);
     SetName(L"Bullet"); // Use SetName()
-    AABB bulletBox;
-    bulletBox.center = { 0.0f, 0.0f, 0.0f };
-    bulletBox.extents = { 0.1f, 0.1f, 0.1f }; // Match the visual scale
-    SetBoundingBox(bulletBox);
 }
 
 Bullet::~Bullet()
