@@ -54,7 +54,7 @@ void Game::Run()
     {
         if (!m_window.ProcessMessages()) break;
 
-       auto currentTime = std::chrono::steady_clock::now();
+        auto currentTime = std::chrono::steady_clock::now();
         float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - m_lastTime).count();
         m_lastTime = currentTime;
 
@@ -75,13 +75,20 @@ void Game::Update(float deltaTime)
 {
     m_input.Update();
 
+    // ESC to quit
+    if (m_input.IsKeyDown(VK_ESCAPE))
+    {
+        PostQuitMessage(0);
+    }
+
     // Toggle bloom with B key
     static bool bKeyWasPressed = false;
     bool bKeyPressed = m_input.IsKeyDown('B');
     if (bKeyPressed && !bKeyWasPressed)
     {
         m_renderer->GetPostProcess()->ToggleBloom();
-        LOG_INFO(m_renderer->GetPostProcess()->IsBloomEnabled() ? "Bloom: ON" : "Bloom: OFF");
+        bool isEnabled = m_renderer->GetPostProcess()->IsBloomEnabled();
+        LOG_INFO(isEnabled ? "Bloom: ON" : "Bloom: OFF");;
     }
     bKeyWasPressed = bKeyPressed;
 

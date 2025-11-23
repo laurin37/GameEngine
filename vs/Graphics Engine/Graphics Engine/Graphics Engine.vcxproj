@@ -287,6 +287,14 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Shaders\BrightPass.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Assets\Shaders\GaussianBlur.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

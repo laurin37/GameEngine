@@ -106,10 +106,10 @@ void Scene::CreateMaterials()
     m_matGlowing = std::make_shared<Material>(DirectX::XMFLOAT4(2.0f, 2.0f, 2.0f, 1.0f), 1.0f, 256.0f); // Bright white emissive (specPower>100 triggers emit)
     
     // Create colored emissive materials for orbs (matching point light colors)
-    m_matOrbRed = std::make_shared<Material>(DirectX::XMFLOAT4(1.5f, 0.8f, 0.8f, 1.0f), 1.0f, 256.0f);    // Red-ish
-    m_matOrbGreen = std::make_shared<Material>(DirectX::XMFLOAT4(0.8f, 1.5f, 0.8f, 1.0f), 1.0f, 256.0f);  // Green-ish
-    m_matOrbBlue = std::make_shared<Material>(DirectX::XMFLOAT4(0.8f, 0.8f, 1.5f, 1.0f), 1.0f, 256.0f);   // Blue-ish
-    m_matOrbOrange = std::make_shared<Material>(DirectX::XMFLOAT4(1.5f, 1.2f, 0.8f, 1.0f), 1.0f, 256.0f); // Orange-ish
+    m_matOrbRed = std::make_shared<Material>(DirectX::XMFLOAT4(2.5f, 1.2f, 1.2f, 1.0f), 1.0f, 256.0f);    // Bright red
+    m_matOrbGreen = std::make_shared<Material>(DirectX::XMFLOAT4(1.2f, 2.5f, 1.2f, 1.0f), 1.0f, 256.0f);  // Bright green
+    m_matOrbBlue = std::make_shared<Material>(DirectX::XMFLOAT4(1.2f, 1.2f, 2.5f, 1.0f), 1.0f, 256.0f);   // Bright blue
+    m_matOrbOrange = std::make_shared<Material>(DirectX::XMFLOAT4(2.5f, 2.0f, 1.2f, 1.0f), 1.0f, 256.0f); // Bright orange
     
     // Store bullet and health object materials
     m_bulletMesh = m_meshSphere;

@@ -45,4 +45,8 @@ private:
     // Bloom effect
     std::unique_ptr<BloomEffect> m_bloomEffect;
     bool m_bloomEnabled = true; // Toggle for bloom on/off
+    
+    // Black texture to use when bloom is disabled
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_blackTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_blackSRV;
 };

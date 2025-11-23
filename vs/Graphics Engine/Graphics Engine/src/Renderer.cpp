@@ -51,17 +51,19 @@ void Renderer::RenderFrame(
     // 2. Unbind shader resources again before setting main render targets
     context->PSSetShaderResources(0, 3, nullSRVs);
 
-    // 3. Set main back buffer as render target and clear it
-    context->OMSetRenderTargets(1, &rtv, dsv);
-    const float clearColor[] = { 0.0f, 0.05f, 0.1f, 1.0f };
-    context->ClearRenderTargetView(rtv, clearColor);
-    context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-    // 4. Render scene directly to back buffer
+    // 3. RENDER TO OFFSCREEN TEXTURE (for post-processing)
+    m_postProcess->Bind(context, dsv);  // This sets the post-process offscreen texture as render target
+    
+    // 4. Render scene to offscreen texture
     RenderMainPass(camera, gameObjects, lightView * lightProj, dirLight, pointLights);
 
-    // 5. CRITICAL: Unbind all shader resources at the end of the frame
-    // This ensures a clean state for the next frame and prevents warnings
+    // 5. Unbind shader resources before post-processing
+    context->PSSetShaderResources(0, 3, nullSRVs);
+    
+    // 6. APPLY POST-PROCESSING (renders from offscreen texture to back buffer)
+    m_postProcess->Draw(context, rtv);  // This applies bloom and renders to back buffer
+    
+    // 7. CRITICAL: Unbind all shader resources at the end of the frame
     context->PSSetShaderResources(0, 3, nullSRVs);
 }
 

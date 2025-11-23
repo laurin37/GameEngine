@@ -153,7 +153,7 @@ float4 PS_main(PS_INPUT input) : SV_TARGET
     // Add emissive component (bright materials emit light directly)
     // Use material color's channel to determine emissive strength
     // If specular power is very high (>100), treat as emissive
-    float emissiveStrength = (specularPower > 100.0f) ? 1.2f : 0.0f; // Reduced from 3.0
+    float emissiveStrength = (specularPower > 100.0f) ? 2.5f : 0.0f; // Increased for obvious glow
     float3 emissive = baseColor * emissiveStrength;
     finalColor += emissive;
 

@@ -48,7 +48,27 @@ void PostProcess::Init(ID3D11Device* device, int width, int height)
     
     // 5. Initialize Bloom Effect
     m_bloomEffect = std::make_unique<BloomEffect>();
-    m_bloomEffect->Init(device, width, height, 0.8f, 0.06f); // Lower threshold, slightly higher intensity for visible bloom
+    m_bloomEffect->Init(device, width, height, 0.3f, 0.5f); // Very low threshold, very high intensity for testing
+    
+    // 6. Create a 1x1 black texture for when bloom is disabled
+    // DirectX requires a valid texture - can't pass nullptr
+    D3D11_TEXTURE2D_DESC blackTexDesc = {};
+    blackTexDesc.Width = 1;
+    blackTexDesc.Height = 1;
+    blackTexDesc.MipLevels = 1;
+    blackTexDesc.ArraySize = 1;
+    blackTexDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    blackTexDesc.SampleDesc.Count = 1;
+    blackTexDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    blackTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    
+    float blackPixel[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    D3D11_SUBRESOURCE_DATA blackInitData = {};
+    blackInitData.pSysMem = blackPixel;
+    blackInitData.SysMemPitch = sizeof(float) * 4;
+    
+    ThrowIfFailed(device->CreateTexture2D(&blackTexDesc, &blackInitData, &m_blackTexture));
+    ThrowIfFailed(device->CreateShaderResourceView(m_blackTexture.Get(), nullptr, &m_blackSRV));
 }
 
 void PostProcess::Bind(ID3D11DeviceContext* context, ID3D11DepthStencilView* dsv)
@@ -66,11 +86,16 @@ void PostProcess::Bind(ID3D11DeviceContext* context, ID3D11DepthStencilView* dsv
 void PostProcess::Draw(ID3D11DeviceContext* context, ID3D11RenderTargetView* backBufferRTV)
 {
     // === STEP 1: Apply Bloom Effect (if enabled) ===
-    ID3D11ShaderResourceView* bloomSRV = nullptr;
+    ID3D11ShaderResourceView* bloomSRV;
     
     if (m_bloomEnabled)
     {
         bloomSRV = m_bloomEffect->Apply(context, m_offScreenSRV.Get());
+    }
+    else
+    {
+        // Use black texture when bloom is disabled (can't pass nullptr)
+        bloomSRV = m_blackSRV.Get();
     }
     
     // === STEP 2: Final Pass (Tone Mapping + Gamma Correction) ===

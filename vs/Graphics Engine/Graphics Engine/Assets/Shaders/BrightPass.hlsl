@@ -19,20 +19,14 @@ struct VS_OUTPUT
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-    // Sample the scene
+    // DEBUG: Always return green to test if this shader is even running
+    return float4(0.0, 1.0, 0.0, 1.0); // BRIGHT GREEN
+    
+    // Original code (commented out for testing):
+    /*
     float3 color = sceneTexture.Sample(sceneSampler, input.uv).rgb;
-    
-    // Calculate perceived brightness using luminance
-    // Using Rec. 709 luma coefficients
     float brightness = dot(color, float3(0.2126, 0.7152, 0.0722));
-    
-    // Only keep pixels above threshold
-    if (brightness > threshold)
-    {
-        // Return the bright pixel
-        return float4(color, 1.0);
-    }
-    
-    // Return black for pixels below threshold
-    return float4(0.0, 0.0, 0.0, 1.0);
+    float contribution = saturate((brightness - threshold) / threshold);
+    return float4(color * contribution, 1.0);
+    */
 }
