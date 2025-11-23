@@ -30,10 +30,11 @@ void Scene::Load()
     m_dirLight.color = { 0.2f, 0.2f, 0.3f, 1.0f };
 
     m_pointLights.resize(MAX_POINT_LIGHTS);
-    m_pointLights[0] = { {0.0f, 0.0f, 0.0f, 15.0f}, {1.0f, 0.0f, 0.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
-    m_pointLights[1] = { {0.0f, 0.0f, 0.0f, 15.0f}, {0.0f, 1.0f, 0.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
-    m_pointLights[2] = { {0.0f, 0.0f, 0.0f, 15.0f}, {0.0f, 0.0f, 1.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
-    m_pointLights[3] = { {0.0f, 0.0f, 0.0f, 15.0f}, {1.0f, 0.5f, 0.0f, 2.0f}, {0.2f, 0.2f, 0.0f, 0.0f} };
+    // Glowing orb lights: {position(x,y,z,range), color(r,g,b,intensity), attenuation(const,linear,quad,pad)}
+    m_pointLights[0] = { {0.0f, 2.0f, 0.0f, 15.0f}, {1.0f, 0.5f, 0.5f, 2.0f}, {0.5f, 0.05f, 0.005f, 0.0f} };  // Red-ish
+    m_pointLights[1] = { {0.0f, 2.0f, 0.0f, 15.0f}, {0.5f, 1.0f, 0.5f, 2.0f}, {0.5f, 0.05f, 0.005f, 0.0f} };  // Green-ish
+    m_pointLights[2] = { {0.0f, 2.0f, 0.0f, 15.0f}, {0.5f, 0.5f, 1.0f, 2.0f}, {0.5f, 0.05f, 0.005f, 0.0f} };  // Blue-ish
+    m_pointLights[3] = { {0.0f, 2.0f, 0.0f, 15.0f}, {1.0f, 0.8f, 0.5f, 2.0f}, {0.5f, 0.05f, 0.005f, 0.0f} };  // Orange-ish
 
     // 3. Load Basic Assets
     std::shared_ptr<Mesh> meshCube = m_assetManager->LoadMesh("Assets/Models/basic/cube.obj");
@@ -75,7 +76,8 @@ void Scene::Load()
 
     auto gunPtr = std::make_unique<Gun>(gunMesh.get(), gunMaterial);
     gunPtr->SetPosition(m_player->GetPosition().x + 0.5f, m_player->GetPosition().y + 0.5f, m_player->GetPosition().z + 0.5f);
-    gunPtr->SetScale(0.2f, 0.2f, 0.8f); 
+    gunPtr->SetScale(0.2f, 0.2f, 0.8f);
+    // No collider for gun - it should not block anything
 
     m_player->SetGun(gunPtr.get()); 
     gunPtr->SetOwner(m_player); 
@@ -295,18 +297,28 @@ void Scene::Update(float deltaTime, Input& input)
         m_gameObjects[artifactIndex]->SetRotation(DirectX::XM_PIDIV2, time, 0.0f);
     }
 
-    // Animate Orbs (orbit around artifact)
+    // Animate orbs orbiting the artifact + sync lights
+    DirectX::XMFLOAT3 artifactPos = (artifactIndex != -1) ? 
+        m_gameObjects[artifactIndex]->GetPosition() : DirectX::XMFLOAT3(0.0f, 2.0f, 0.0f);
+    
     float orbRadius = 3.0f;
-    float orbSpeed = 1.0f; // radians per second
-    int orbCount = 0;
-    for (size_t i = 0; i < m_gameObjects.size(); ++i) {
-        if (m_gameObjects[i]->GetName() == L"Orb") {
-            float angle = (DirectX::XM_2PI / 4.0f) * orbCount + (time * orbSpeed);
-            float x = orbRadius * cosf(angle);
-            float z = orbRadius * sinf(angle);
-            float y = 2.0f + 0.3f * sinf(time * 2.0f + orbCount); // Gentle up/down bob
+    int orbIndex = 0;
+    for (size_t i = 0; i < m_gameObjects.size(); ++i)
+    {
+        if (m_gameObjects[i]->GetName() == L"Orb" && orbIndex < 4)
+        {
+            float angle = (time * 0.5f) + (orbIndex * DirectX::XM_PIDIV2);
+            
+            float x = artifactPos.x + cosf(angle) * orbRadius;
+            float z = artifactPos.z + sinf(angle) * orbRadius;
+            float y = artifactPos.y + sinf(time * 2.0f + orbIndex) * 0.3f;
+            
             m_gameObjects[i]->SetPosition(x, y, z);
-            orbCount++;
+            
+            // Sync point light position (preserve range in w component)
+            m_pointLights[orbIndex].position = DirectX::XMFLOAT4(x, y, z, 15.0f);
+            
+            orbIndex++;
         }
     }
 
