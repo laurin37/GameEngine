@@ -8,33 +8,27 @@ using namespace DirectX;
 Player::Player(Mesh* mesh, std::shared_ptr<Material> material, Camera* camera)
     : GameObject(mesh, material), m_camera(camera), m_velocity(0.0f, 0.0f, 0.0f), m_onGround(false)
 {
-    // Set a smaller bounding box for the player (human size)
-    // Center at 0.9 means feet at Y=0 (ground), top of head at Y=1.8 (6ft tall human)
     AABB playerBox;
-    playerBox.center = { 0.0f, 0.9f, 0.0f };  // Fixed: was 1.0, causing gap at bottom
+    playerBox.center = { 0.0f, 0.9f, 0.0f };
     playerBox.extents = { 0.4f, 0.9f, 0.4f };
     SetBoundingBox(playerBox);
 }
 
 void Player::Update(float deltaTime, Input& input, const std::vector<std::unique_ptr<GameObject>>& worldObjects)
 {
-    // --- Rotation (Mouse Look) ---
+    // Rotation
     float mouseSens = 0.002f;
     int dx = input.GetMouseDeltaX();
     int dy = input.GetMouseDeltaY();
 
-    // Rotate Player (Y-axis)
     float rotY = GetRotation().y + dx * mouseSens;
     SetRotation(GetRotation().x, rotY, GetRotation().z);
-
-    // Rotate Camera (X-axis, clamped)
     m_camera->AdjustRotation(dy * mouseSens, dx * mouseSens, 0.0f);
 
-    // Sync Camera Position to Player (First Person)
     DirectX::XMFLOAT3 pos = GetPosition();
-    m_camera->SetPosition(pos.x, pos.y + 0.7f, pos.z); // Eye level (0.7 = 1.6 eye height - 0.9 center offset)
+    m_camera->SetPosition(pos.x, pos.y + 0.7f, pos.z);
 
-    // --- Movement (WASD) ---
+    // Movement
     float yaw = GetRotation().y;
     DirectX::XMFLOAT3 forward = { sinf(yaw), 0.0f, cosf(yaw) };
     DirectX::XMFLOAT3 right = { cosf(yaw), 0.0f, -sinf(yaw) };
@@ -45,7 +39,6 @@ void Player::Update(float deltaTime, Input& input, const std::vector<std::unique
     if (input.IsKeyDown('A')) { moveDir.x -= right.x; moveDir.z -= right.z; }
     if (input.IsKeyDown('D')) { moveDir.x += right.x; moveDir.z += right.z; }
 
-    // Normalize
     float length = sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z);
     if (length > 0.0f) {
         moveDir.x /= length;
@@ -55,18 +48,22 @@ void Player::Update(float deltaTime, Input& input, const std::vector<std::unique
     m_velocity.x = moveDir.x * MOVE_SPEED;
     m_velocity.z = moveDir.z * MOVE_SPEED;
 
-    // --- Jumping ---
+    // Jumping
     if (m_onGround && input.IsKeyDown(VK_SPACE)) {
         m_velocity.y = JUMP_FORCE;
         m_onGround = false;
     }
 
-    // --- Gravity ---
+    // Gravity with clamp to prevent tunneling
     m_velocity.y += GRAVITY * deltaTime;
+    const float MAX_FALL_SPEED = -15.0f;
+    if (m_velocity.y < MAX_FALL_SPEED) {
+        m_velocity.y = MAX_FALL_SPEED;
+    }
 
     DirectX::XMFLOAT3 startPos = GetPosition();
 
-    // --- Move X/Z ---
+    // Move X/Z
     SetPosition(startPos.x + m_velocity.x * deltaTime, startPos.y, startPos.z + m_velocity.z * deltaTime);
     
     for (const auto& obj : worldObjects) {
@@ -77,7 +74,7 @@ void Player::Update(float deltaTime, Input& input, const std::vector<std::unique
         }
     }
 
-    // --- Move Y (PREDICTIVE) ---
+    // Move Y (Predictive)
     startPos = GetPosition();
     if (startPos.y < -20.0f) {
         SetPosition(0.0f, 5.0f, 0.0f);
@@ -102,17 +99,12 @@ void Player::Update(float deltaTime, Input& input, const std::vector<std::unique
             collisionDetected = true;
 
             if (m_velocity.y < 0) {
-                // LANDING: Position so that AABB bottom = objectTop
-                // AABB bottom = (transform.y + localOffset) - extents.y
-                // We want: (transform.y + localOffset) - extents.y = objectTop
-                // So: transform.y = objectTop - localOffset + extents.y
                 float objectTop = objBox.center.y + objBox.extents.y;
                 float resolvedY = objectTop - localOffset + playerBox.extents.y;
                 SetPosition(startPos.x, resolvedY, startPos.z);
                 m_velocity.y = 0;
             }
             else if (m_velocity.y > 0) {
-                // HEAD BUMP
                 float objectBottom = objBox.center.y - objBox.extents.y;
                 float resolvedY = objectBottom - localOffset - playerBox.extents.y;
                 SetPosition(startPos.x, resolvedY, startPos.z);
@@ -126,20 +118,36 @@ void Player::Update(float deltaTime, Input& input, const std::vector<std::unique
         SetPosition(startPos.x, intendedY, startPos.z);
     }
 
-    // --- GROUND CHECK (Foot Probe) ---
+    // Ground Check with penetration recovery
     m_onGround = false;
     AABB footProbe = GetWorldBoundingBox();
-    footProbe.center.y -= (skinWidth * 2.0f);
+    footProbe.center.y -= (skinWidth * 3.0f);
 
     for (const auto& obj : worldObjects) {
         if (obj.get() == this || obj.get() == m_gunPtr || dynamic_cast<Bullet*>(obj.get())) continue;
-        if (PhysicsSystem::AABBIntersects(footProbe, obj->GetWorldBoundingBox())) {
+        
+        AABB objBox = obj->GetWorldBoundingBox();
+        if (PhysicsSystem::AABBIntersects(footProbe, objBox)) {
             m_onGround = true;
+            
+            // Emergency penetration recovery
+            AABB currentBox = GetWorldBoundingBox();
+            if (PhysicsSystem::AABBIntersects(currentBox, objBox) && m_velocity.y <= 0) {
+                float objectTop = objBox.center.y + objBox.extents.y;
+                float currentBottom = currentBox.center.y - currentBox.extents.y;
+                
+                if (currentBottom < objectTop) {
+                    float localCenterY = currentBox.center.y - GetPosition().y;
+                    float correctedY = objectTop - localCenterY + currentBox.extents.y;
+                    SetPosition(GetPosition().x, correctedY, GetPosition().z);
+                    m_velocity.y = 0;
+                }
+            }
             break;
         }
     }
 
-    // --- Update Gun ---
+    // Update Gun
     if (m_gunPtr) {
         DirectX::XMFLOAT3 camPos = m_camera->GetPositionFloat3();
         DirectX::XMVECTOR camForwardVec = m_camera->GetForward();
