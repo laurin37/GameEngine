@@ -416,3 +416,41 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# =========================
+# CMake Build Artifacts
+# =========================
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+build/
+
+# =========================
+# DirectX Compiled Shaders
+# =========================
+*.cso
+
+# =========================
+# Additional C++ Build Files
+# =========================
+*.exe
+*.out
+*.app
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+*.exp
+*.map
+
+# =========================
+# macOS/Linux
+# =========================
+.DS_Store
+Thumbs.db

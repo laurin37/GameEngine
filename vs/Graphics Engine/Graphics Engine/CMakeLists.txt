@@ -8,11 +8,37 @@ project(GeminiDXEngine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 4. Tell CMake where to find your source files
-# GLOB_RECURSE finds all .cpp and .h files inside 'src' automatically.
-file(GLOB_RECURSE SOURCE_FILES 
-    "src/*.cpp"
-    "src/inclue/*.h"
+# 4. Explicitly list all source files
+# This ensures CMake always includes all files (GLOB_RECURSE can miss new files)
+set(SOURCE_FILES
+    src/main.cpp
+    src/AssetManager.cpp
+    src/Bullet.cpp
+    src/Camera.cpp
+    src/Collider.cpp
+    src/Crosshair.cpp
+    src/Game.cpp
+    src/GameObject.cpp
+    src/Graphics.cpp
+    src/Gun.cpp
+    src/HealthObject.cpp
+    src/Input.cpp
+    src/Material.cpp
+    src/Mesh.cpp
+    src/ModelLoader.cpp
+    src/PhysicsBody.cpp
+    src/PhysicsSystem.cpp
+    src/Player.cpp
+    src/PostProcess.cpp
+    src/Renderer.cpp
+    src/Scene.cpp
+    src/Shader.cpp
+    src/SimpleFont.cpp
+    src/Skybox.cpp
+    src/TextureLoader.cpp
+    src/Transform.cpp
+    src/UIRenderer.cpp
+    src/Window.cpp
 )
 
 # 5. Create the Executable (The .exe)
