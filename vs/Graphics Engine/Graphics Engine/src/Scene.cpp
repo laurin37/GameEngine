@@ -380,5 +380,10 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer)
         m_crosshair->Draw(uiRenderer, m_font, RenderingConstants::DEFAULT_SCREEN_WIDTH, RenderingConstants::DEFAULT_SCREEN_HEIGHT);
     }
 
+    // Draw FPS
+    std::string fpsString = "FPS: " + std::to_string(m_fps);
+    float green[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+    uiRenderer->DrawString(m_font, fpsString, 10.0f, 10.0f, 32.0f, green);
+
     uiRenderer->DisableUIState();
 }
