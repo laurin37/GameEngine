@@ -6,8 +6,9 @@
 #include "Material.h"
 #include "Collision.h"
 #include "Transform.h"
+#include "Collider.h" // Include Collider for ColliderType
 
-// Forward declaration
+// Forward declarations
 class PhysicsBody;
 
 class GameObject
@@ -22,6 +23,7 @@ public:
 
     DirectX::XMFLOAT3 GetPosition() const { return m_transform.GetPosition(); }
     DirectX::XMFLOAT3 GetRotation() const { return m_transform.GetRotation(); }
+    DirectX::XMFLOAT3 GetScale() const { return m_transform.GetScale(); }
     DirectX::XMMATRIX GetWorldMatrix() const { return m_transform.GetWorldMatrix(); }
     
     void Draw(ID3D11DeviceContext* context, ID3D11Buffer* psMaterialConstantBuffer) const;
@@ -38,14 +40,22 @@ public:
     // Optional Physics Component
     PhysicsBody* GetPhysics() const { return m_physics; }
     void SetPhysics(PhysicsBody* physics) { m_physics = physics; }
+    
+    // Optional Collider Component
+    Collider* GetCollider() const { return m_collider; }
+    void SetCollider(Collider* collider) { m_collider = collider; }
+    
+    // Auto-generate collider from current mesh
+    void GenerateCollider(ColliderType type = ColliderType::AABB);
 
 protected:
     Mesh* m_mesh;
     std::shared_ptr<Material> m_material;
     Transform m_transform;
-    PhysicsBody* m_physics = nullptr; // Optional physics component
+    PhysicsBody* m_physics = nullptr;
+    Collider* m_collider = nullptr;
 
 private:
-    AABB m_boundingBox;
+    AABB m_boundingBox; // Legacy - kept for backward compatibility
     std::wstring m_name;
 };

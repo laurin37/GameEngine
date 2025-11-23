@@ -1,6 +1,7 @@
 #include "include/Mesh.h"
 
 Mesh::Mesh(ID3D11Device* device, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices)
+    : m_vertices(vertices) // Store for collision generation
 {
     m_indexCount = static_cast<UINT>(indices.size());
 

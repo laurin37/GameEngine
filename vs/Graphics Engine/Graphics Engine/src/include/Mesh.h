@@ -24,9 +24,16 @@ public:
     Mesh& operator=(const Mesh&) = delete;
 
     void Draw(ID3D11DeviceContext* context) const;
+    
+    // Accessors for collision generation
+    const std::vector<Vertex>& GetVertices() const { return m_vertices; }
+    size_t GetVertexCount() const { return m_vertices.size(); }
 
 private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_indexBuffer;
     UINT m_indexCount;
+    
+    // Store vertex data for collision generation
+    std::vector<Vertex> m_vertices;
 };

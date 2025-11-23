@@ -96,6 +96,9 @@
     <ClCompile Include="src\PhysicsBody.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="src\Collider.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include\Window.h">
@@ -180,6 +183,12 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="src\include\PhysicsBody.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\Collider.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\MeshUtils.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
