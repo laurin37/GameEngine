@@ -1,0 +1,68 @@
+#include "../../../include/ECS/Systems/ECSRenderSystem.h"
+#include "../../../include/Renderer/Mesh.h"
+#include "../../../include/Renderer/Material.h"
+#include <DirectXMath.h>
+
+using namespace DirectX;
+
+namespace ECS {
+
+void RenderSystem::Render(ComponentManager& cm, Renderer* renderer, Camera& camera) {
+    if (!renderer) return;
+    
+    // Get all entities with both Render and Transform components
+    std::vector<Entity> entities = cm.GetEntitiesWithRenderAndTransform();
+    
+    for (Entity entity : entities) {
+        RenderComponent* render = cm.GetRender(entity);
+        TransformComponent* transform = cm.GetTransform(entity);
+        
+        if (!render || !transform || !render->mesh || !render->material) continue;
+        
+        // Build world matrix from transform
+        XMMATRIX scaleMatrix = XMMatrixScaling(transform->scale.x, transform->scale.y, transform->scale.z);
+        XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(transform->rotation.x, transform->rotation.y, transform->rotation.z);
+        XMMATRIX translationMatrix = XMMatrixTranslation(transform->position.x, transform->position.y, transform->position.z);
+        
+        XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+        
+        // Set world matrix (renderer should have method for this)
+        // Note: Since we don't have direct access to renderer internals,
+        // we'll need to work with the existing GameObject rendering system temporarily
+        
+        // TODO: This is a placeholder - proper integration requires updating Renderer
+        // to accept raw world matrices instead of GameObject pointers
+        
+        // For now, we can't directly render ECS entities without refactoring Renderer
+        // This demonstrates the ECS architecture, but full integration needs more work
+    }
+}
+
+void RenderSystem::RenderDebug(ComponentManager& cm, Renderer* renderer, Camera& camera) {
+    if (!renderer) return;
+    
+    // Get all entities with Collider and Transform
+    std::vector<Entity> entitiesWithColliders = cm.GetEntitiesWithCollider();
+    
+    for (Entity entity : entitiesWithColliders) {
+        ColliderComponent* collider = cm.GetCollider(entity);
+        TransformComponent* transform = cm.GetTransform(entity);
+        
+        if (!collider || !transform || !collider->enabled) continue;
+        
+        // Calculate world-space AABB
+        AABB worldAABB;
+        worldAABB.extents.x = transform->scale.x * collider->localAABB.extents.x;
+        worldAABB.extents.y = transform->scale.y * collider->localAABB.extents.y;
+        worldAABB.extents.z = transform->scale.z * collider->localAABB.extents.z;
+        
+        worldAABB.center.x = transform->position.x + (transform->scale.x * collider->localAABB.center.x);
+        worldAABB.center.y = transform->position.y + (transform->scale.y * collider->localAABB.center.y);
+        worldAABB.center.z = transform->position.z + (transform->scale.z * collider->localAABB.center.z);
+        
+        // TODO: Render debug wireframe box
+        // Requires access to renderer's debug rendering methods
+    }
+}
+
+} // namespace ECS

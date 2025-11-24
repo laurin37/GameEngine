@@ -30,6 +30,41 @@ void Scene::Load()
     CreateMaterials();
     SpawnSceneObjects();
     InitializeUI();
+
+    // Create ECS test entities (will not be visible but physics will run)
+    // Entity 1: Falling cube at origin
+    ECS::Entity cube1 = ECSExample::CreateFallingCube(
+        m_ecsComponentManager,
+        m_meshCube.get(),
+        m_matFloor
+    );
+
+    // Entity 2: Floating cube (no gravity)
+    ECS::Entity cube2 = m_ecsComponentManager.CreateEntity();
+    ECS::TransformComponent transform2;
+    transform2.position = { 5.0f, 3.0f, 0.0f };
+    m_ecsComponentManager.AddTransform(cube2, transform2);
+    
+    ECS::PhysicsComponent physics2;
+    physics2.useGravity = false;  // This one won't fall
+    m_ecsComponentManager.AddPhysics(cube2, physics2);
+
+    ECS::RenderComponent render2;
+    render2.mesh = m_meshCube.get();
+    render2.material = m_matOrbBlue; // Make it blue to distinguish
+    m_ecsComponentManager.AddRender(cube2, render2);
+
+    // Entity 3: Another falling cube
+    ECS::Entity cube3 = ECSExample::CreateFallingCube(
+        m_ecsComponentManager,
+        m_meshCube.get(),
+        m_matFloor
+    );
+    // Offset position
+    ECS::TransformComponent* transform3 = m_ecsComponentManager.GetTransform(cube3);
+    if (transform3) {
+        transform3->position = { -3.0f, 8.0f, 2.0f };
+    }
 }
 
 void Scene::SetupCamera()
@@ -247,7 +282,7 @@ void Scene::SpawnBullet(const DirectX::XMFLOAT3& position, const DirectX::XMFLOA
 
 void Scene::Update(float deltaTime, Input& input)
 {
-    // FPS Calc
+    // FPS Calc (always run regardless of ECS mode)
     m_frameCount++;
     m_timeAccum += deltaTime;
     if (m_timeAccum >= 1.0f)
@@ -258,149 +293,232 @@ void Scene::Update(float deltaTime, Input& input)
         m_timeAccum -= 1.0f;
     }
 
-    // Player Shooting
-    if (m_player && input.IsKeyDown(VK_LBUTTON))
+    if (m_useECS) {
+        // ECS Mode: Update physics system + free camera
+        m_ecsPhysicsSystem.Update(m_ecsComponentManager, deltaTime);
+        
+        // Free camera controls (WASD + Mouse)
+        const float CAMERA_SPEED = 5.0f;
+        const float MOUSE_SENSITIVITY = 0.001f;
+        
+        // Mouse look
+        int dx = input.GetMouseDeltaX();
+        int dy = input.GetMouseDeltaY();
+        m_camera->AdjustRotation(dy * MOUSE_SENSITIVITY, dx * MOUSE_SENSITIVITY, 0.0f);
+        
+        // WASD movement
+        DirectX::XMVECTOR forward = m_camera->GetForward();
+        DirectX::XMVECTOR right = m_camera->GetRight();
+        DirectX::XMFLOAT3 camPos = m_camera->GetPositionFloat3();
+        
+        DirectX::XMFLOAT3 fwd, rgt;
+        DirectX::XMStoreFloat3(&fwd, forward);
+        DirectX::XMStoreFloat3(&rgt, right);
+        
+        if (input.IsKeyDown('W')) {
+            camPos.x += fwd.x * CAMERA_SPEED * deltaTime;
+            camPos.y += fwd.y * CAMERA_SPEED * deltaTime;
+            camPos.z += fwd.z * CAMERA_SPEED * deltaTime;
+        }
+        if (input.IsKeyDown('S')) {
+            camPos.x -= fwd.x * CAMERA_SPEED * deltaTime;
+            camPos.y -= fwd.y * CAMERA_SPEED * deltaTime;
+            camPos.z -= fwd.z * CAMERA_SPEED * deltaTime;
+        }
+        if (input.IsKeyDown('A')) {
+            camPos.x -= rgt.x * CAMERA_SPEED * deltaTime;
+            camPos.y -= rgt.y * CAMERA_SPEED * deltaTime;
+            camPos.z -= rgt.z * CAMERA_SPEED * deltaTime;
+        }
+        if (input.IsKeyDown('D')) {
+            camPos.x += rgt.x * CAMERA_SPEED * deltaTime;
+            camPos.y += rgt.y * CAMERA_SPEED * deltaTime;
+            camPos.z += rgt.z * CAMERA_SPEED * deltaTime;
+        }
+        
+        // Up/Down with Space/Ctrl
+        if (input.IsKeyDown(VK_SPACE)) {
+            camPos.y += CAMERA_SPEED * deltaTime;
+        }
+        if (input.IsKeyDown(VK_CONTROL)) {
+            camPos.y -= CAMERA_SPEED * deltaTime;
+        }
+        
+        m_camera->SetPosition(camPos.x, camPos.y, camPos.z);
+    } else 
     {
-        m_player->Shoot(this); 
-    }
-
-    // Update Player
-    if (m_player)
-    {
-        m_player->Update(deltaTime, input, m_gameObjects);
-    }
-
-    // Update Bullets
-    for (const auto& bullet : m_bullets)
-    {
-        bullet->Update(deltaTime);
-
-        if (bullet->GetPosition().y < -50.0f || bullet->GetAge() > 5.0f) 
+        // GameObject Mode: Update player, bullets, animations, etc.
+        
+        // Player Shooting
+        if (m_player && input.IsKeyDown(VK_LBUTTON))
         {
-            bullet->SetActive(false); 
-            continue;
+            m_player->Shoot(this); 
         }
 
-        for (const auto& obj : m_gameObjects)
+        // Update Player
+        if (m_player)
         {
-            if (obj.get() == bullet || obj.get() == m_player) continue; 
-            
-            // Skip gun to prevent false hits
-            Gun* gun = dynamic_cast<Gun*>(obj.get());
-            if (gun) continue; 
+            m_player->Update(deltaTime, input, m_gameObjects);
+        }
 
-            if (PhysicsSystem::AABBIntersects(bullet->GetWorldBoundingBox(), obj->GetWorldBoundingBox()))
+        // Update Bullets
+        for (const auto& bullet : m_bullets)
+        {
+            bullet->Update(deltaTime);
+
+            if (bullet->GetPosition().y < -50.0f || bullet->GetAge() > 5.0f) 
             {
-                HealthObject* healthObj = dynamic_cast<HealthObject*>(obj.get());
-                if (healthObj)
+                bullet->SetActive(false); 
+                continue;
+            }
+
+            for (const auto& obj : m_gameObjects)
+            {
+                if (obj.get() == bullet || obj.get() == m_player) continue; 
+                
+                // Skip gun to prevent false hits
+                Gun* gun = dynamic_cast<Gun*>(obj.get());
+                if (gun) continue; 
+
+                if (PhysicsSystem::AABBIntersects(bullet->GetWorldBoundingBox(), obj->GetWorldBoundingBox()))
                 {
-                    LOG_DEBUG("Bullet hit HealthObject!");
-                    healthObj->TakeDamage(bullet->GetDamage());
-                    bullet->SetActive(false); 
-                    break; 
-                }
-                else
-                {
-                    bullet->SetActive(false);
-                    break;
+                    HealthObject* healthObj = dynamic_cast<HealthObject*>(obj.get());
+                    if (healthObj)
+                    {
+                        LOG_DEBUG("Bullet hit HealthObject!");
+                        healthObj->TakeDamage(bullet->GetDamage());
+                        bullet->SetActive(false); 
+                        break; 
+                    }
+                    else
+                    {
+                        bullet->SetActive(false);
+                        break;
+                    }
                 }
             }
         }
-    }
 
-    // Cleanup
-    std::vector<Bullet*> activeBullets;
-    for (auto* bullet : m_bullets)
-    {
-        if (bullet->IsActive()) activeBullets.push_back(bullet);
-    }
-    m_bullets = activeBullets;
-
-    std::vector<std::unique_ptr<GameObject>> activeGameObjects;
-    for (auto& obj : m_gameObjects)
-    {
-        if (obj.get() == m_player)
+        // Cleanup
+        std::vector<Bullet*> activeBullets;
+        for (auto* bullet : m_bullets)
         {
+            if (bullet->IsActive()) activeBullets.push_back(bullet);
+        }
+        m_bullets = activeBullets;
+
+        std::vector<std::unique_ptr<GameObject>> activeGameObjects;
+        for (auto& obj : m_gameObjects)
+        {
+            if (obj.get() == m_player)
+            {
+                activeGameObjects.push_back(std::move(obj));
+                continue;
+            }
+
+            Bullet* bulletObj = dynamic_cast<Bullet*>(obj.get());
+            if (bulletObj)
+            {
+                if (bulletObj->IsActive()) activeGameObjects.push_back(std::move(obj));
+                continue; 
+            }
+
+            HealthObject* healthObj = dynamic_cast<HealthObject*>(obj.get());
+            if (healthObj)
+            {
+                if (!healthObj->IsDead()) activeGameObjects.push_back(std::move(obj));
+                continue;
+            }
+            
             activeGameObjects.push_back(std::move(obj));
-            continue;
+        }
+        m_gameObjects = std::move(activeGameObjects);
+
+        // Animation
+        static float time = 0.0f;
+        time += deltaTime;
+
+        size_t artifactIndex = -1;
+        for (size_t i = 0; i < m_gameObjects.size(); ++i) {
+            if (m_gameObjects[i]->GetName() == L"Artifact") { 
+                artifactIndex = i;
+                break;
+            }
+        }
+        if (artifactIndex != -1)
+        {
+            m_gameObjects[artifactIndex]->SetRotation(DirectX::XM_PIDIV2, time, 0.0f);
         }
 
-        Bullet* bulletObj = dynamic_cast<Bullet*>(obj.get());
-        if (bulletObj)
-        {
-            if (bulletObj->IsActive()) activeGameObjects.push_back(std::move(obj));
-            continue; 
-        }
-
-        HealthObject* healthObj = dynamic_cast<HealthObject*>(obj.get());
-        if (healthObj)
-        {
-            if (!healthObj->IsDead()) activeGameObjects.push_back(std::move(obj));
-            continue;
-        }
+        // Animate orbs orbiting the artifact + sync lights
+        DirectX::XMFLOAT3 artifactPos = (artifactIndex != -1) ? 
+            m_gameObjects[artifactIndex]->GetPosition() : DirectX::XMFLOAT3(0.0f, 2.0f, 0.0f);
         
-        activeGameObjects.push_back(std::move(obj));
-    }
-    m_gameObjects = std::move(activeGameObjects);
-
-    // Animation
-    static float time = 0.0f;
-    time += deltaTime;
-
-    size_t artifactIndex = -1;
-    for (size_t i = 0; i < m_gameObjects.size(); ++i) {
-        if (m_gameObjects[i]->GetName() == L"Artifact") { 
-            artifactIndex = i;
-            break;
-        }
-    }
-    if (artifactIndex != -1)
-    {
-        m_gameObjects[artifactIndex]->SetRotation(DirectX::XM_PIDIV2, time, 0.0f);
-    }
-
-    // Animate orbs orbiting the artifact + sync lights
-    DirectX::XMFLOAT3 artifactPos = (artifactIndex != -1) ? 
-        m_gameObjects[artifactIndex]->GetPosition() : DirectX::XMFLOAT3(0.0f, 2.0f, 0.0f);
-    
-    float orbRadius = 3.0f;
-    int orbIndex = 0;
-    for (size_t i = 0; i < m_gameObjects.size(); ++i)
-    {
-        if (m_gameObjects[i]->GetName() == L"Orb" && orbIndex < 4)
+        float orbRadius = 3.0f;
+        int orbIndex = 0;
+        for (size_t i = 0; i < m_gameObjects.size(); ++i)
         {
-            float angle = (time * 0.5f) + (orbIndex * DirectX::XM_PIDIV2);
-            
-            float x = artifactPos.x + cosf(angle) * orbRadius;
-            float z = artifactPos.z + sinf(angle) * orbRadius;
-            float y = artifactPos.y + sinf(time * 2.0f + orbIndex) * 0.3f;
-            
-            m_gameObjects[i]->SetPosition(x, y, z);
-            
-            // Sync point light position (preserve range in w component)
-            m_pointLights[orbIndex].position = DirectX::XMFLOAT4(x, y, z, 15.0f);
-            
-            orbIndex++;
+            if (m_gameObjects[i]->GetName() == L"Orb" && orbIndex < 4)
+            {
+                float angle = (time * 0.5f) + (orbIndex * DirectX::XM_PIDIV2);
+                
+                float x = artifactPos.x + cosf(angle) * orbRadius;
+                float z = artifactPos.z + sinf(angle) * orbRadius;
+                float y = artifactPos.y + sinf(time * 2.0f + orbIndex) * 0.3f;
+                
+                m_gameObjects[i]->SetPosition(x, y, z);
+                
+                // Sync point light position (preserve range in w component)
+                m_pointLights[orbIndex].position = DirectX::XMFLOAT4(x, y, z, 15.0f);
+                
+                orbIndex++;
+            }
         }
     }
-
-    // Note: PhysicsSystem disabled for now - only Player uses physics and manages it internally
-    // TODO: Re-enable when other GameObjects need physics (bullets with gravity, falling objects, etc.)
-    // m_physics.Update(m_gameObjects, deltaTime);
 }
 
 void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCollision)
 {
     if (!renderer || !uiRenderer) return;
 
-    renderer->RenderFrame(*m_camera, m_gameObjects, m_dirLight, m_pointLights);
-    
-    // Conditionally render debug collision boxes
-    if (showDebugCollision)
-    {
-        renderer->RenderDebug(*m_camera, m_gameObjects);
+    if (m_useECS) {
+        // ECS Mode: Hybrid Rendering
+        // Create temporary GameObjects for ECS entities to use existing Renderer
+        std::vector<std::unique_ptr<GameObject>> ecsRenderObjects;
+        
+        // Get all entities with Transform and Render components
+        const auto& entities = m_ecsComponentManager.GetEntitiesWithRenderAndTransform();
+        
+        for (ECS::Entity entity : entities) {
+            auto* transform = m_ecsComponentManager.GetTransform(entity);
+            auto* render = m_ecsComponentManager.GetRender(entity);
+            
+            if (transform && render && render->mesh && render->material) {
+                // Create temp GameObject wrapper
+                auto obj = std::make_unique<GameObject>(render->mesh, render->material);
+                
+                // Sync Transform
+                obj->SetPosition(transform->position.x, transform->position.y, transform->position.z);
+                obj->SetRotation(transform->rotation.x, transform->rotation.y, transform->rotation.z);
+                obj->SetScale(transform->scale.x, transform->scale.y, transform->scale.z);
+                
+                ecsRenderObjects.push_back(std::move(obj));
+            }
+        }
+        
+        // Render the temporary objects
+        renderer->RenderFrame(*m_camera, ecsRenderObjects, m_dirLight, m_pointLights);
+        
+    } else {
+        // GameObject Mode: Render normal scene
+        renderer->RenderFrame(*m_camera, m_gameObjects, m_dirLight, m_pointLights);
+        
+        if (showDebugCollision) {
+            renderer->RenderDebug(*m_camera, m_gameObjects);
+        }
     }
-
+    
+    // Render UI (always, regardless of mode)
     uiRenderer->EnableUIState();
 
     if (m_crosshair)
@@ -411,17 +529,42 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
     // Draw FPS
     std::string fpsString = "FPS: " + std::to_string(m_fps);
     float green[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
-    uiRenderer->DrawString(m_font, fpsString, 10.0f, 10.0f, 32.0f, green);
+    uiRenderer->DrawString(m_font, fpsString, 10.0f, 10.0f, 24.0f, green);
     
     // Draw Bloom status
     std::string bloomStatus = renderer->GetPostProcess()->IsBloomEnabled() ? "[B] Bloom: ON" : "[B] Bloom: OFF";
     float yellow[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
-    uiRenderer->DrawString(m_font, bloomStatus, 10.0f, 50.0f, 24.0f, yellow);
+    uiRenderer->DrawString(m_font, bloomStatus, 10.0f, 40.0f, 24.0f, yellow);
     
     // Draw Debug Collision status
     std::string debugStatus = showDebugCollision ? "[H] Debug: ON" : "[H] Debug: OFF";
     float cyan[4] = { 0.0f, 1.0f, 1.0f, 1.0f };
-    uiRenderer->DrawString(m_font, debugStatus, 10.0f, 80.0f, 24.0f, cyan);
+    uiRenderer->DrawString(m_font, debugStatus, 10.0f, 70.0f, 24.0f, cyan);
+    
+    // Draw ECS status
+    std::string ecsStatus = m_useECS ? "[E] ECS: ON" : "[E] ECS: OFF";
+    float red[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    uiRenderer->DrawString(m_font, ecsStatus, 10.0f, 100.0f, 24.0f, red);
+
+    // Draw ECS debug info when enabled
+    if (m_useECS) {
+        size_t entityCount = m_ecsComponentManager.GetEntityCount();
+        std::string entityInfo = "ECS Entities: " + std::to_string(entityCount);
+        float white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        uiRenderer->DrawString(m_font, entityInfo, 10.0f, 130.0f, 20.0f, white);
+        
+        // Show position of first entity with transform
+        auto entities = m_ecsComponentManager.GetEntitiesWithTransform();
+        if (!entities.empty()) {
+            ECS::TransformComponent* trans = m_ecsComponentManager.GetTransform(entities[0]);
+            if (trans) {
+                char posBuffer[128];
+                snprintf(posBuffer, sizeof(posBuffer), "Entity[0] Pos: (%.1f, %.1f, %.1f)", 
+                    trans->position.x, trans->position.y, trans->position.z);
+                uiRenderer->DrawString(m_font, posBuffer, 10.0f, 155.0f, 18.0f, white);
+            }
+        }
+    }
 
     uiRenderer->DisableUIState();
 }

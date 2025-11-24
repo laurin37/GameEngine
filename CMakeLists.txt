@@ -42,6 +42,9 @@ set(SOURCE_FILES
     "GameEngineSolution/GameEngineProject/src/UI/UIRenderer.cpp"
     "GameEngineSolution/GameEngineProject/src/Utils/Logger.cpp"
     "GameEngineSolution/GameEngineProject/src/Utils/Transform.cpp"
+    "GameEngineSolution/GameEngineProject/src/ECS/ComponentManager.cpp"
+    "GameEngineSolution/GameEngineProject/src/ECS/Systems/ECSPhysicsSystem.cpp"
+    "GameEngineSolution/GameEngineProject/src/ECS/Systems/ECSRenderSystem.cpp"
 )
 
 # 5. Create the Executable (The .exe)

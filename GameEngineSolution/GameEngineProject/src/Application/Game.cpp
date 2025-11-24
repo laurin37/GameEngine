@@ -102,6 +102,19 @@ void Game::Update(float deltaTime)
     }
     hKeyWasPressed = hKeyPressed;
 
+    // Toggle ECS with E key
+    static bool eKeyWasPressed = false;
+    bool eKeyPressed = m_input.IsKeyDown('E');
+    if (eKeyPressed && !eKeyWasPressed)
+    {
+        if (m_scene) {
+            m_scene->ToggleECS();
+            bool isUsingECS = m_scene->IsUsingECS();
+            LOG_INFO(isUsingECS ? "Switched to ECS" : "Switched to GameObject");
+        }
+    }
+    eKeyWasPressed = eKeyPressed;
+
     if (m_scene)
     {
         m_scene->Update(deltaTime, m_input);

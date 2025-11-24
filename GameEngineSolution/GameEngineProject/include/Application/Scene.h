@@ -11,6 +11,10 @@
 #include "../UI/SimpleFont.h"
 #include "../UI/Crosshair.h"
 #include "../Renderer/Graphics.h"
+#include "../ECS/ComponentManager.h"
+#include "../ECS/Systems/ECSPhysicsSystem.h"
+#include "../ECS/Systems/ECSRenderSystem.h"
+#include "../ECS/ECSExample.h"
 
 class AssetManager;
 class Renderer;
@@ -28,6 +32,10 @@ public:
     void Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCollision = false);
 
     void SpawnBullet(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction, float speed, float damage);
+    
+    // ECS Control
+    void ToggleECS() { m_useECS = !m_useECS; }
+    bool IsUsingECS() const { return m_useECS; }
 
 private:
     void AddBulletInternal(std::unique_ptr<Bullet> bullet);
@@ -91,4 +99,11 @@ private:
     int m_fps = 0;
     int m_frameCount = 0;
     float m_timeAccum = 0.0f;
+    
+    // NEW: ECS system
+    ECS::ComponentManager m_ecsComponentManager;
+    ECS::PhysicsSystem m_ecsPhysicsSystem;
+    ECS::RenderSystem m_ecsRenderSystem;
+    
+    bool m_useECS = false;  // Toggle flag
 };
