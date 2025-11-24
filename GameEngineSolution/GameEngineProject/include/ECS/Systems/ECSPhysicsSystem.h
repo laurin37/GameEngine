@@ -24,7 +24,7 @@ private:
     void IntegrateVelocity(TransformComponent& transform, PhysicsComponent& physics, float dt);
     
     // Collision (simplified - no GameObject dependency)
-    void CheckGroundCollision(TransformComponent& transform, PhysicsComponent& physics, ComponentManager& cm);
+    void CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics, ComponentManager& cm);
     
     // Physics constants
     static constexpr float MIN_DELTA_TIME = 0.0001f;

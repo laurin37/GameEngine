@@ -13,6 +13,42 @@
 #include "../../include/Renderer/RenderingConstants.h"
 #include "../../include/ResourceManagement/FontLoader.h"
 #include "../../include/Renderer/PostProcess.h"
+#include <algorithm>
+
+// Helper to calculate AABB from mesh
+ECS::ColliderComponent CalculateCollider(const Mesh* mesh) {
+    ECS::ColliderComponent collider;
+    if (!mesh || mesh->GetVertexCount() == 0) return collider;
+
+    DirectX::XMFLOAT3 minPos = { FLT_MAX, FLT_MAX, FLT_MAX };
+    DirectX::XMFLOAT3 maxPos = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+
+    for (const auto& v : mesh->GetVertices()) {
+        minPos.x = (std::min)(minPos.x, v.pos.x);
+        minPos.y = (std::min)(minPos.y, v.pos.y);
+        minPos.z = (std::min)(minPos.z, v.pos.z);
+
+        maxPos.x = (std::max)(maxPos.x, v.pos.x);
+        maxPos.y = (std::max)(maxPos.y, v.pos.y);
+        maxPos.z = (std::max)(maxPos.z, v.pos.z);
+    }
+
+    // Calculate center and extents (half-size)
+    collider.localAABB.center = {
+        (minPos.x + maxPos.x) * 0.5f,
+        (minPos.y + maxPos.y) * 0.5f,
+        (minPos.z + maxPos.z) * 0.5f
+    };
+
+    collider.localAABB.extents = {
+        (maxPos.x - minPos.x) * 0.5f,
+        (maxPos.y - minPos.y) * 0.5f,
+        (maxPos.z - minPos.z) * 0.5f
+    };
+    
+    collider.enabled = true;
+    return collider;
+}
 
 Scene::Scene(AssetManager* assetManager, Graphics* graphics)
     : m_assetManager(assetManager), m_graphics(graphics),
@@ -46,8 +82,7 @@ void Scene::Load()
     ECS::PhysicsComponent floorPhys;
     floorPhys.useGravity = false; // Static
     m_ecsComponentManager.AddPhysics(floor, floorPhys);
-    ECS::ColliderComponent floorCol;
-    floorCol.localAABB.extents = { 50.0f, 0.05f, 50.0f };
+    ECS::ColliderComponent floorCol = CalculateCollider(m_meshCube.get());
     m_ecsComponentManager.AddCollider(floor, floorCol);
 
     // 2. Room
@@ -62,8 +97,7 @@ void Scene::Load()
     ECS::PhysicsComponent roomPhys;
     roomPhys.useGravity = false;
     m_ecsComponentManager.AddPhysics(room, roomPhys);
-    ECS::ColliderComponent roomCol; // Simplified collider
-    roomCol.localAABB.extents = { 10.0f, 5.0f, 10.0f }; 
+    ECS::ColliderComponent roomCol = CalculateCollider(m_meshRoom.get());
     m_ecsComponentManager.AddCollider(room, roomCol);
 
     // 3. Pillars & Roofs
@@ -83,8 +117,7 @@ void Scene::Load()
         ECS::PhysicsComponent pilPhys;
         pilPhys.useGravity = false;
         m_ecsComponentManager.AddPhysics(pillar, pilPhys);
-        ECS::ColliderComponent pilCol;
-        pilCol.localAABB.extents = { 0.5f, 1.0f, 0.5f };
+        ECS::ColliderComponent pilCol = CalculateCollider(m_meshCylinder.get());
         m_ecsComponentManager.AddCollider(pillar, pilCol);
 
         // Roof
@@ -115,8 +148,7 @@ void Scene::Load()
     ECS::PhysicsComponent pedPhys;
     pedPhys.useGravity = false;
     m_ecsComponentManager.AddPhysics(pedestal, pedPhys);
-    ECS::ColliderComponent pedCol;
-    pedCol.localAABB.extents = { 1.0f, 0.5f, 1.0f };
+    ECS::ColliderComponent pedCol = CalculateCollider(m_meshCube.get());
     m_ecsComponentManager.AddCollider(pedestal, pedCol);
 
     // 5. Artifact (Rotating)
@@ -164,6 +196,9 @@ void Scene::Load()
         orbPhys.useGravity = false;
         m_ecsComponentManager.AddPhysics(orb, orbPhys);
         
+        ECS::ColliderComponent orbCol = CalculateCollider(m_meshSphere.get());
+        m_ecsComponentManager.AddCollider(orb, orbCol);
+        
         ECS::OrbitComponent orbOrbit;
         orbOrbit.center = { 0.0f, 2.0f, 0.0f };
         orbOrbit.radius = orbRadius;
@@ -177,6 +212,23 @@ void Scene::Load()
         orbLight.range = 15.0f;
         m_ecsComponentManager.AddLight(orb, orbLight);
     }
+
+    // 7. Falling Box
+    ECS::Entity box = m_ecsComponentManager.CreateEntity();
+    ECS::TransformComponent boxTrans;
+    boxTrans.position = { -5.0f, 10.0f, 0.0f };
+    boxTrans.scale = { 1.0f, 1.0f, 1.0f };
+    m_ecsComponentManager.AddTransform(box, boxTrans);
+    ECS::RenderComponent boxRender;
+    boxRender.mesh = m_meshCube.get();
+    boxRender.material = m_matPillar;
+    m_ecsComponentManager.AddRender(box, boxRender);
+    ECS::PhysicsComponent boxPhys;
+    boxPhys.useGravity = true;
+    boxPhys.mass = 1.0f;
+    m_ecsComponentManager.AddPhysics(box, boxPhys);
+    ECS::ColliderComponent boxCol = CalculateCollider(m_meshCube.get());
+    m_ecsComponentManager.AddCollider(box, boxCol);
 }
 
 void Scene::SetupCamera()
@@ -637,6 +689,10 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
         }
         
         renderer->RenderFrame(*m_camera, ecsRenderObjects, m_dirLight, ecsLights);
+        
+        if (showDebugCollision) {
+            m_ecsRenderSystem.RenderDebug(m_ecsComponentManager, renderer, *m_camera);
+        }
         
     } else {
         // GameObject Mode: Render normal scene

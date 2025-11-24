@@ -24,7 +24,9 @@ struct ID3D11ShaderResourceView;
 struct ID3D11SamplerState;
 struct ID3D11Texture2D;
 struct ID3D11DepthStencilView;
+struct ID3D11DepthStencilState;
 struct ID3D11RasterizerState;
+struct AABB;
 class AssetManager; // Forward Declaration
 
 class Renderer
@@ -43,6 +45,10 @@ public:
     void RenderDebug(
         const Camera& camera,
         const std::vector<std::unique_ptr<GameObject>>& gameObjects);
+
+    void RenderDebugAABBs(
+        const Camera& camera,
+        const std::vector<AABB>& aabbs);
 
     // Accessors
     PostProcess* GetPostProcess() { return m_postProcess.get(); }
@@ -85,6 +91,7 @@ private:
     std::unique_ptr<VertexShader> m_debugVS;
     std::unique_ptr<PixelShader> m_debugPS;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_wireframeRS;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_depthDisabledDSS;
     
     // Scene objects
     std::unique_ptr<Skybox> m_skybox;

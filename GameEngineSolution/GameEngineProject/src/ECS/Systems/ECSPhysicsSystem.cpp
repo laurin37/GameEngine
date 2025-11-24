@@ -33,7 +33,7 @@ void PhysicsSystem::Update(ComponentManager& cm, float deltaTime) {
         
         // Simple ground collision
         if (physics->checkCollisions) {
-            CheckGroundCollision(*transform, *physics, cm);
+            CheckGroundCollision(entity, *transform, *physics, cm);
         }
     }
 }
@@ -62,16 +62,26 @@ void PhysicsSystem::IntegrateVelocity(TransformComponent& transform, PhysicsComp
     transform.position.z += physics.velocity.z * dt;
 }
 
-void PhysicsSystem::CheckGroundCollision(TransformComponent& transform, PhysicsComponent& physics, ComponentManager& cm) {
-    // Simple ground plane at Y=0
-    const float GROUND_Y = 0.0f;
-    const float ENTITY_HALF_HEIGHT = 0.5f;  // Assume 1 unit tall entity
+void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics, ComponentManager& cm) {
+    // Simple ground collision
+    // Floor is at Y = -1.0 with scale Y = 0.1 (half-extent 0.05) -> Top surface at -0.95
+    const float GROUND_Y = -0.95f; 
     
-    float bottomY = transform.position.y - ENTITY_HALF_HEIGHT;
+    float entityHalfHeight = 0.5f; // Default fallback
+    
+    // Try to get collider for accurate bounds
+    if (cm.HasCollider(entity)) {
+        ColliderComponent* collider = cm.GetCollider(entity);
+        if (collider) {
+            entityHalfHeight = collider->localAABB.extents.y * transform.scale.y;
+        }
+    }
+    
+    float bottomY = transform.position.y - entityHalfHeight;
     
     if (bottomY <= GROUND_Y) {
         // Collision with ground
-        transform.position.y = GROUND_Y + ENTITY_HALF_HEIGHT;
+        transform.position.y = GROUND_Y + entityHalfHeight;
         physics.velocity.y = 0.0f;
         physics.isGrounded = true;
     } else {

@@ -43,6 +43,7 @@ void RenderSystem::RenderDebug(ComponentManager& cm, Renderer* renderer, Camera&
     
     // Get all entities with Collider and Transform
     std::vector<Entity> entitiesWithColliders = cm.GetEntitiesWithCollider();
+    std::vector<AABB> aabbs;
     
     for (Entity entity : entitiesWithColliders) {
         ColliderComponent* collider = cm.GetCollider(entity);
@@ -60,9 +61,10 @@ void RenderSystem::RenderDebug(ComponentManager& cm, Renderer* renderer, Camera&
         worldAABB.center.y = transform->position.y + (transform->scale.y * collider->localAABB.center.y);
         worldAABB.center.z = transform->position.z + (transform->scale.z * collider->localAABB.center.z);
         
-        // TODO: Render debug wireframe box
-        // Requires access to renderer's debug rendering methods
+        aabbs.push_back(worldAABB);
     }
+    
+    renderer->RenderDebugAABBs(camera, aabbs);
 }
 
 } // namespace ECS

@@ -202,6 +202,13 @@ void Renderer::InitPipeline(int width, int height)
     wireframeDesc.CullMode = D3D11_CULL_NONE;
     wireframeDesc.DepthClipEnable = true;
     ThrowIfFailed(device->CreateRasterizerState(&wireframeDesc, &m_wireframeRS));
+
+    D3D11_DEPTH_STENCIL_DESC dssDesc = {};
+    dssDesc.DepthEnable = false;
+    dssDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dssDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+    dssDesc.StencilEnable = false;
+    ThrowIfFailed(device->CreateDepthStencilState(&dssDesc, &m_depthDisabledDSS));
 }
 
 void Renderer::RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& gameObjects, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj)
@@ -363,5 +370,54 @@ void Renderer::RenderDebug(
 
     // Reset rasterizer state to default
     context->RSSetState(nullptr);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+void Renderer::RenderDebugAABBs(
+    const Camera& camera,
+    const std::vector<AABB>& aabbs)
+{
+    ID3D11DeviceContext* context = m_graphics->GetContext().Get();
+
+    // Set wireframe mode
+    context->RSSetState(m_wireframeRS.Get());
+
+    // Disable depth testing for debug rendering (draw on top)
+    context->OMSetDepthStencilState(m_depthDisabledDSS.Get(), 0);
+
+    // Bind debug shaders
+    m_debugVS->Bind(context);
+    m_debugPS->Bind(context);
+
+    // Get the cube mesh for drawing AABBs
+    auto debugCube = m_assetManager->GetDebugCube();
+    if (!debugCube) return;
+
+    // The debug vertex shader's Bind method already sets the correct input layout.
+    // We just need to set the topology for drawing lines.
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+    DirectX::XMMATRIX viewMatrix = camera.GetViewMatrix();
+
+    for (const auto& aabb : aabbs)
+    {
+        DirectX::XMMATRIX scale = DirectX::XMMatrixScaling(aabb.extents.x * 2.0f, aabb.extents.y * 2.0f, aabb.extents.z * 2.0f);
+        DirectX::XMMATRIX translate = DirectX::XMMatrixTranslation(aabb.center.x, aabb.center.y, aabb.center.z);
+        DirectX::XMMATRIX worldMatrix = scale * translate;
+
+        DirectX::XMMATRIX wvp = worldMatrix * viewMatrix * m_projectionMatrix;
+        
+        CB_VS_vertexshader vs_cb;
+        DirectX::XMStoreFloat4x4(&vs_cb.worldMatrix, DirectX::XMMatrixTranspose(wvp));
+        context->UpdateSubresource(m_vsConstantBuffer.Get(), 0, nullptr, &vs_cb, 0, 0);
+
+        context->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());
+
+        debugCube->Draw(context);
+    }
+
+    // Reset rasterizer state to default
+    context->RSSetState(nullptr);
+    context->OMSetDepthStencilState(nullptr, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
