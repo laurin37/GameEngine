@@ -33,6 +33,20 @@ public:
         ECS::ComponentManager& componentManager
     );
 
+    // Update timers
+    void Update(float deltaTime);
+
+    // Static message logging
+    static void AddMessage(const std::string& message, float duration);
+
 private:
     bool m_enabled = true;
+
+    struct DebugMessage {
+        std::string text;
+        float duration;
+        float timeRemaining;
+    };
+
+    static std::vector<DebugMessage> s_messages;
 };

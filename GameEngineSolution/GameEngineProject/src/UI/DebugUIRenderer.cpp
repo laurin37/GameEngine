@@ -7,6 +7,8 @@ DebugUIRenderer::DebugUIRenderer() : m_enabled(true)
 {
 }
 
+std::vector<DebugUIRenderer::DebugMessage> DebugUIRenderer::s_messages;
+
 void DebugUIRenderer::Render(
     UIRenderer* uiRenderer,
     const SimpleFont& font,
@@ -155,5 +157,39 @@ void DebugUIRenderer::Render(
             uiRenderer->DrawString(font, healthBuffer, 10.0f, yPos, 18.0f, color);
             yPos += lineHeight;
         }
+    }
+
+    // Render Debug Messages
+    if (!s_messages.empty()) {
+        yPos += lineHeight;
+        uiRenderer->DrawString(font, "--- Debug Log ---", 10.0f, yPos, 20.0f, white);
+        yPos += lineHeight;
+
+        for (const auto& msg : s_messages) {
+            float* color = white;
+            if (msg.timeRemaining < 1.0f) color = yellow; // Fade out effect (simulated)
+            
+            uiRenderer->DrawString(font, msg.text, 10.0f, yPos, 24.0f, color);
+            yPos += lineHeight;
+        }
+    }
+}
+
+void DebugUIRenderer::Update(float deltaTime) {
+    for (auto it = s_messages.begin(); it != s_messages.end(); ) {
+        it->timeRemaining -= deltaTime;
+        if (it->timeRemaining <= 0.0f) {
+            it = s_messages.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void DebugUIRenderer::AddMessage(const std::string& message, float duration) {
+    s_messages.push_back({ message, duration, duration });
+    // Keep only last 10 messages
+    if (s_messages.size() > 10) {
+        s_messages.erase(s_messages.begin());
     }
 }

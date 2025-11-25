@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "../../../include/ECS/Systems/WeaponSystem.h"
+#include "../../../include/UI/DebugUIRenderer.h"
 #include <iostream>
 #include <format>
 #include <cmath>
@@ -39,7 +40,9 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
     weapon.timeSinceLastShot = 0.0f;
     weapon.currentAmmo--;
 
-    std::cout << std::format("Bang! Ammo: {}/{}", weapon.currentAmmo, weapon.maxAmmo) << std::endl;
+    std::string bangMsg = std::format("BANG! Ammo: {}/{}", weapon.currentAmmo, weapon.maxAmmo);
+    std::cout << bangMsg << std::endl;
+    DebugUIRenderer::AddMessage(bangMsg, 5.0f);
 
     // Calculate ray origin and direction
     // Origin is player position + camera offset (if any)
@@ -78,6 +81,9 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
     ECS::Entity hitEntity = ECS::NULL_ENTITY;
     float minDistance = weapon.range;
 
+    std::cout << std::format("Ray Origin: ({:.2f}, {:.2f}, {:.2f}) Dir: ({:.2f}, {:.2f}, {:.2f})", 
+        rayOrigin.x, rayOrigin.y, rayOrigin.z, rayDir.x, rayDir.y, rayDir.z) << std::endl;
+
     auto colliderArray = componentManager.GetComponentArray<ECS::ColliderComponent>();
     for (size_t i = 0; i < colliderArray->GetSize(); ++i) {
         ECS::Entity targetEntity = colliderArray->GetEntityAtIndex(i);
@@ -107,10 +113,17 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
         };
 
         float t = 0.0f;
-        if (RaySphereIntersect(rayOrigin, rayDir, center, radius, t)) {
+        bool intersect = RaySphereIntersect(rayOrigin, rayDir, center, radius, t);
+        
+        // Debug Log for every potential target
+        std::cout << std::format("Target {}: Center({:.2f}, {:.2f}, {:.2f}) Radius {:.2f} - Hit: {}", 
+           targetEntity, center.x, center.y, center.z, radius, intersect) << std::endl;
+
+        if (intersect) {
             if (t < minDistance) {
                 minDistance = t;
                 hitEntity = targetEntity;
+                std::cout << "  -> New closest hit!" << std::endl;
             }
         }
     }
