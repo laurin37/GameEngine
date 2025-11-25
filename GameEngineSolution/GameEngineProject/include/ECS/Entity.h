@@ -8,6 +8,7 @@ namespace ECS {
 // Entity is just an ID
 using Entity = uint32_t;
 constexpr Entity NULL_ENTITY = 0;
+constexpr Entity MAX_ENTITIES = 5000;
 
 // Manages entity ID generation and recycling
 class EntityIDGenerator {

@@ -18,6 +18,9 @@ public:
     bool GetActiveCamera(ComponentManager& cm, 
                          DirectX::XMMATRIX& viewOut, 
                          DirectX::XMMATRIX& projOut);
+
+    // Get the active camera entity ID
+    Entity GetActiveCameraEntity(ComponentManager& cm);
 };
 
 }

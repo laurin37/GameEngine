@@ -30,7 +30,8 @@ public:
         int fps,
         bool bloomEnabled,
         bool debugCollisionEnabled,
-        ECS::ComponentManager& componentManager
+        ECS::ComponentManager& componentManager,
+        ECS::Entity activeCamera = ECS::NULL_ENTITY
     );
 
     // Update timers

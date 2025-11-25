@@ -15,7 +15,8 @@ void DebugUIRenderer::Render(
     int fps,
     bool bloomEnabled,
     bool debugCollisionEnabled,
-    ECS::ComponentManager& componentManager
+    ECS::ComponentManager& componentManager,
+    ECS::Entity activeCamera
 )
 {
     if (!m_enabled || !uiRenderer) return;
@@ -116,7 +117,6 @@ void DebugUIRenderer::Render(
     }
 
     // Show active camera position
-    ECS::Entity activeCamera = componentManager.GetActiveCamera();
     if (activeCamera != ECS::NULL_ENTITY) {
         ECS::TransformComponent* camTrans = componentManager.GetComponentPtr<ECS::TransformComponent>(activeCamera);
         ECS::CameraComponent* camComp = componentManager.GetComponentPtr<ECS::CameraComponent>(activeCamera);

@@ -53,7 +53,7 @@ void CameraSystem::Update(ComponentManager& cm) {
 }
 
 bool CameraSystem::GetActiveCamera(ComponentManager& cm, XMMATRIX& viewOut, XMMATRIX& projOut) {
-    Entity activeCameraEntity = cm.GetActiveCamera();
+    Entity activeCameraEntity = GetActiveCameraEntity(cm);
     
     // Check if we have a valid entity (NULL_ENTITY = 0)
     if (activeCameraEntity == NULL_ENTITY) {
@@ -68,6 +68,20 @@ bool CameraSystem::GetActiveCamera(ComponentManager& cm, XMMATRIX& viewOut, XMMA
     projOut = XMLoadFloat4x4(&camera.projectionMatrix);
     
     return true;
+}
+
+Entity CameraSystem::GetActiveCameraEntity(ComponentManager& cm) {
+    auto cameraArray = cm.GetComponentArray<CameraComponent>();
+    // Iterate to find active camera
+    // Note: This is O(N) where N is number of cameras (usually small)
+    for (size_t i = 0; i < cameraArray->GetSize(); ++i) {
+        Entity entity = cameraArray->GetEntityAtIndex(i);
+        CameraComponent& cam = cameraArray->GetData(entity);
+        if (cam.isActive) {
+            return entity;
+        }
+    }
+    return NULL_ENTITY;
 }
 
 } // namespace ECS

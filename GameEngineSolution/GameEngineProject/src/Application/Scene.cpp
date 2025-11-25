@@ -168,7 +168,7 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
     
     if (m_ecsCameraSystem.GetActiveCamera(m_ecsComponentManager, ecsView, ecsProj)) {
         // Find player entity with camera to get position/rotation
-        ECS::Entity cameraEntity = m_ecsComponentManager.GetActiveCamera();
+        ECS::Entity cameraEntity = m_ecsCameraSystem.GetActiveCameraEntity(m_ecsComponentManager);
         
         if (m_ecsComponentManager.HasComponent<ECS::TransformComponent>(cameraEntity)) {
             auto& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(cameraEntity);
@@ -209,14 +209,18 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
     }
 
     // Render debug UI (can be toggled with F1)
-    m_debugUI.Render(
-        uiRenderer, 
-        m_font, 
-        m_fps, 
-        renderer->GetPostProcess()->IsBloomEnabled(),
-        showDebugCollision,
-        m_ecsComponentManager
-    );
+    if (m_debugUI.IsEnabled()) {
+        ECS::Entity activeCamera = m_ecsCameraSystem.GetActiveCameraEntity(m_ecsComponentManager);
+        m_debugUI.Render(
+            uiRenderer, 
+            m_font, 
+            m_fps, 
+            renderer->GetPostProcess()->IsBloomEnabled(),
+            showDebugCollision,
+            m_ecsComponentManager,
+            activeCamera
+        );
+    }
 
     uiRenderer->DisableUIState();
 }

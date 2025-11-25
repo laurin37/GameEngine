@@ -36,7 +36,6 @@ set(SOURCE_FILES
     "GameEngineSolution/GameEngineProject/src/UI/DebugUIRenderer.cpp"
     "GameEngineSolution/GameEngineProject/src/Utils/Logger.cpp"
     "GameEngineSolution/GameEngineProject/src/Utils/Transform.cpp"
-    "GameEngineSolution/GameEngineProject/src/ECS/ComponentManager.cpp"
     "GameEngineSolution/GameEngineProject/src/ECS/Systems/ECSPhysicsSystem.cpp"
     "GameEngineSolution/GameEngineProject/src/ECS/Systems/ECSRenderSystem.cpp"
     "GameEngineSolution/GameEngineProject/src/ECS/Systems/ECSMovementSystem.cpp"

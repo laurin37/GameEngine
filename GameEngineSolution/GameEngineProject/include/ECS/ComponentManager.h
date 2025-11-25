@@ -26,11 +26,24 @@ public:
 // ComponentArray<T>
 // Generic sparse set storage for components
 // ========================================
+// ========================================
+// ComponentArray<T>
+// Generic sparse set storage for components
+// ========================================
 template<typename T>
 class ComponentArray : public IComponentArray {
 public:
+    ComponentArray() {
+        // Initialize sparse array with invalid index
+        m_entityToIndex.resize(MAX_ENTITIES, 0xFFFFFFFF);
+    }
+
     void InsertData(Entity entity, T component) {
-        if (m_entityToIndex.find(entity) != m_entityToIndex.end()) {
+        if (entity >= MAX_ENTITIES) {
+            throw std::runtime_error("Entity ID out of range.");
+        }
+
+        if (m_entityToIndex[entity] != 0xFFFFFFFF) {
             // Component already exists, just update it
             m_componentArray[m_entityToIndex[entity]] = component;
             return;
@@ -39,13 +52,13 @@ public:
         // Add new component
         size_t newIndex = m_size;
         m_entityToIndex[entity] = newIndex;
-        m_indexToEntity[newIndex] = entity;
+        m_indexToEntity.push_back(entity);
         m_componentArray.push_back(component);
         m_size++;
     }
 
     void RemoveData(Entity entity) {
-        if (m_entityToIndex.find(entity) == m_entityToIndex.end()) {
+        if (entity >= MAX_ENTITIES || m_entityToIndex[entity] == 0xFFFFFFFF) {
             return; // Entity doesn't have this component
         }
 
@@ -60,26 +73,26 @@ public:
         m_entityToIndex[entityOfLastElement] = indexOfRemovedEntity;
         m_indexToEntity[indexOfRemovedEntity] = entityOfLastElement;
 
-        m_entityToIndex.erase(entity);
-        m_indexToEntity.erase(indexOfLastElement);
+        m_entityToIndex[entity] = 0xFFFFFFFF;
+        m_indexToEntity.pop_back();
         m_componentArray.pop_back();
 
         m_size--;
     }
 
     T& GetData(Entity entity) {
-        if (m_entityToIndex.find(entity) == m_entityToIndex.end()) {
+        if (entity >= MAX_ENTITIES || m_entityToIndex[entity] == 0xFFFFFFFF) {
             throw std::runtime_error("Retrieving non-existent component.");
         }
         return m_componentArray[m_entityToIndex[entity]];
     }
 
     bool HasData(Entity entity) const {
-        return m_entityToIndex.find(entity) != m_entityToIndex.end();
+        return entity < MAX_ENTITIES && m_entityToIndex[entity] != 0xFFFFFFFF;
     }
 
     void EntityDestroyed(Entity entity) override {
-        if (m_entityToIndex.find(entity) != m_entityToIndex.end()) {
+        if (entity < MAX_ENTITIES && m_entityToIndex[entity] != 0xFFFFFFFF) {
             RemoveData(entity);
         }
     }
@@ -89,7 +102,7 @@ public:
         return m_componentArray;
     }
     
-    // Helper to get entity for a specific index (useful when iterating the vector directly)
+    // Helper to get entity for a specific index
     Entity GetEntityAtIndex(size_t index) {
         return m_indexToEntity[index];
     }
@@ -100,8 +113,8 @@ public:
 
 private:
     std::vector<T> m_componentArray;
-    std::unordered_map<Entity, size_t> m_entityToIndex;
-    std::unordered_map<size_t, Entity> m_indexToEntity;
+    std::vector<size_t> m_entityToIndex; // Sparse array: Entity ID -> Index
+    std::vector<Entity> m_indexToEntity; // Dense array: Index -> Entity ID
     size_t m_size = 0;
 };
 
@@ -117,9 +130,26 @@ public:
     // ========================================
     // Entity Management
     // ========================================
-    Entity CreateEntity();
-    void DestroyEntity(Entity entity);
-    size_t GetEntityCount() const { return m_entities.size(); }
+    Entity CreateEntity() {
+        Entity entity = m_idGenerator.Create();
+        if (entity >= MAX_ENTITIES) {
+            throw std::runtime_error("Maximum entity count exceeded.");
+        }
+        return entity;
+    }
+
+    void DestroyEntity(Entity entity) {
+        m_idGenerator.Destroy(entity);
+        // Notify all component arrays
+        for (auto const& pair : m_componentArrays) {
+            auto& componentArray = pair.second;
+            if (componentArray) {
+                componentArray->EntityDestroyed(entity);
+            }
+        }
+    }
+
+    size_t GetEntityCount() const { return m_idGenerator.GetTotalCreated(); } // Approximation
 
     // ========================================
     // Generic Component Management
@@ -157,7 +187,7 @@ public:
     // Helper to get the raw array for systems
     template<typename T>
     std::shared_ptr<ComponentArray<T>> GetComponentArray() {
-        std::type_index typeName = std::type_index(typeid(T));
+        const char* typeName = typeid(T).name();
 
         if (m_componentArrays.find(typeName) == m_componentArrays.end()) {
             // Register component type if not exists
@@ -166,48 +196,17 @@ public:
 
         return std::static_pointer_cast<ComponentArray<T>>(m_componentArrays[typeName]);
     }
-    
-    // ========================================
-    // Legacy Helpers (Optional - can be removed if we update all call sites)
-    // ========================================
-    Entity GetActiveCamera() {
-        // This is a bit inefficient now, but acceptable for a single active camera lookup
-        auto cameraArray = GetComponentArray<CameraComponent>();
-        for (auto& cam : cameraArray->GetComponentArray()) {
-            if (cam.isActive) {
-                // We need to find the entity for this component. 
-                // This is where the reverse map in ComponentArray is needed, but we don't have direct access to it from the value.
-                // We have to iterate. Or we can just iterate the sparse set.
-                // Let's iterate the sparse set via the array and use the index.
-                // Wait, ComponentArray stores data densely.
-                // We need to find the entity ID.
-                // Let's add a helper to ComponentArray to get Entity from index.
-                // Actually, for now, let's just return NULL_ENTITY if we can't easily find it, 
-                // OR we can iterate all entities and check HasComponent<CameraComponent>.
-                // Better: The CameraSystem should track the active camera.
-                // For now, let's just leave this unimplemented or do a slow search if needed.
-                // But wait, the original implementation had this.
-                // Let's implement a slow search for now to maintain compatibility.
-                // Actually, I added GetEntityAtIndex to ComponentArray.
-                // But we can't easily map from `cam` reference to index without pointer arithmetic.
-                // Let's just iterate the array by index.
-                size_t index = &cam - &cameraArray->GetComponentArray()[0];
-                return cameraArray->GetEntityAtIndex(index);
-            }
-        }
-        return NULL_ENTITY;
-    }
 
 private:
     // Entity ID generator
     EntityIDGenerator m_idGenerator;
     
-    // Set of all active entities (optional, mainly for DestroyEntity validation)
-    // We can keep this to track valid entities.
-    std::vector<Entity> m_entities;
-
-    // Map from type string pointer to a component array
-    std::unordered_map<std::type_index, std::shared_ptr<IComponentArray>> m_componentArrays;
+    // Map from type name to a component array
+    // Note: Using const char* from typeid(T).name() is generally stable for the lifetime of the program
+    // but std::type_index is safer. However, for performance we might want a static ID.
+    // For now, let's stick to map but optimize ComponentArray first.
+    // Optimization: Use type name string directly as key (pointer comparison might not be safe across DLLs but fine here)
+    std::unordered_map<std::string, std::shared_ptr<IComponentArray>> m_componentArrays;
 };
 
 } // namespace ECS
