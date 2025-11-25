@@ -9,7 +9,6 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 4. Explicitly list all source files
-# This ensures CMake always includes all files (GLOB_RECURSE can miss new files)
 set(SOURCE_FILES
     "GameEngineSolution/GameEngineProject/src/main.cpp"
     "GameEngineSolution/GameEngineProject/src/Application/Game.cpp"
@@ -40,6 +39,7 @@ set(SOURCE_FILES
     "GameEngineSolution/GameEngineProject/src/UI/Crosshair.cpp"
     "GameEngineSolution/GameEngineProject/src/UI/SimpleFont.cpp"
     "GameEngineSolution/GameEngineProject/src/UI/UIRenderer.cpp"
+    "GameEngineSolution/GameEngineProject/src/UI/DebugUIRenderer.cpp"
     "GameEngineSolution/GameEngineProject/src/Utils/Logger.cpp"
     "GameEngineSolution/GameEngineProject/src/Utils/Transform.cpp"
     "GameEngineSolution/GameEngineProject/src/ECS/ComponentManager.cpp"
@@ -57,21 +57,16 @@ add_executable(${PROJECT_NAME} WIN32 ${SOURCE_FILES})
 target_compile_definitions(${PROJECT_NAME} PRIVATE UNICODE _UNICODE)
 
 # 6. Include Directories
-# This lets you write #include "include/Graphics.h" or #include "Graphics.h"
 target_include_directories(${PROJECT_NAME} PRIVATE GameEngineSolution/GameEngineProject/include)
 
 # 7. Link DirectX Libraries
-# Windows usually finds these automatically.
 target_link_libraries(${PROJECT_NAME} PRIVATE
     d3d11
     dxgi
     d3dcompiler
 )
 
-# 8. AUTOMATIC ASSET COPYING (The "Pro" Fix)
-# This command runs after the build finishes. 
-# It copies your 'Assets' folder right next to the new .exe.
-# No more path errors!
+# 8. AUTOMATIC ASSET COPYING
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${CMAKE_SOURCE_DIR}/GameEngineSolution/GameEngineProject/Assets"

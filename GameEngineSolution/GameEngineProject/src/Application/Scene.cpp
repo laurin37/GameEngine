@@ -178,5 +178,15 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
         m_crosshair->Draw(uiRenderer, m_font, 1280, 720);
     }
 
+    // Render debug UI (can be toggled with F1)
+    m_debugUI.Render(
+        uiRenderer, 
+        m_font, 
+        m_fps, 
+        renderer->GetPostProcess()->IsBloomEnabled(),
+        showDebugCollision,
+        m_ecsComponentManager
+    );
+
     uiRenderer->DisableUIState();
 }

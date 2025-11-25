@@ -102,6 +102,18 @@ void Game::Update(float deltaTime)
     }
     hKeyWasPressed = hKeyPressed;
 
+    // Toggle debug UI with F1 key
+    static bool f1KeyWasPressed = false;
+    bool f1KeyPressed = m_input.IsKeyDown(VK_F1);
+    if (f1KeyPressed && !f1KeyWasPressed)
+    {
+        if (m_scene) {
+            m_scene->ToggleDebugUI();
+            LOG_INFO(m_scene->IsDebugUIEnabled() ? "Debug UI: ON" : "Debug UI: OFF");
+        }
+    }
+    f1KeyWasPressed = f1KeyPressed;
+
     if (m_scene)
     {
         m_scene->Update(deltaTime, m_input);

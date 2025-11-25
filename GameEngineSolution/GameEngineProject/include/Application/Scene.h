@@ -10,6 +10,7 @@
 #include "../EntityComponentSystem/Camera.h"
 #include "../UI/SimpleFont.h"
 #include "../UI/Crosshair.h"
+#include "../UI/DebugUIRenderer.h"
 #include "../Renderer/Graphics.h"
 #include "../ECS/ComponentManager.h"
 #include "../ECS/Systems/ECSPhysicsSystem.h"
@@ -39,6 +40,11 @@ public:
     // Scene loading from JSON
     void LoadSceneFromJSON(const std::wstring& jsonPath);
 
+    // Debug UI control
+    void ToggleDebugUI() { m_debugUI.Toggle(); }
+    bool IsDebugUIEnabled() const { return m_debugUI.IsEnabled(); }
+    void SetDebugUIEnabled(bool enabled) { m_debugUI.SetEnabled(enabled); }
+
 private:
     // Asset lookup for JSON scene loading
     std::unordered_map<std::string, Mesh*> BuildMeshLookup();
@@ -52,6 +58,7 @@ private:
     std::unique_ptr<Camera> m_camera;
     SimpleFont m_font;
     std::unique_ptr<Crosshair> m_crosshair;
+    DebugUIRenderer m_debugUI;
 
     // Meshes
     std::shared_ptr<Mesh> m_meshCube;
