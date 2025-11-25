@@ -81,12 +81,12 @@ void Scene::Load()
     if (m_weaponSystem && m_assetManager) {
         auto sphereMesh = m_assetManager->LoadMesh(Config::Paths::DefaultProjectileMesh);
         
-        auto glowingMat = std::make_shared<Material>();
-        glowingMat->SetColor({ 2.0f, 2.0f, 2.0f, 1.0f });
-        glowingMat->SetSpecular(1.0f);
-        glowingMat->SetShininess(256.0f);
+        auto projectileMat = std::make_shared<Material>();
+        projectileMat->SetColor({ 1.0f, 0.2f, 0.2f, 1.0f }); // Reddish
+        projectileMat->SetSpecular(0.5f);
+        projectileMat->SetShininess(32.0f);
         
-        m_weaponSystem->SetProjectileAssets(sphereMesh.get(), glowingMat);
+        m_weaponSystem->SetProjectileAssets(sphereMesh.get(), projectileMat);
     }
 
     RebuildRenderCache();

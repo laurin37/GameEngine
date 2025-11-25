@@ -174,7 +174,7 @@
                 },
                 "playerController": {
                     "moveSpeed": 5.0,
-                    "jumpForce": 5.0,
+                    "jumpForce": 7.0,
                     "mouseSensitivity": 0.0005,
                     "cameraHeight": 0.8
                 },
@@ -193,7 +193,7 @@
                 "weapon": {
                     "damage": 10.0,
                     "range": 50.0,
-                    "fireRate": 1.0,
+                    "fireRate": 0.2,
                     "timeSinceLastShot": 0.0,
                     "isAutomatic": true
                 }
@@ -269,6 +269,9 @@
                 },
                 "physics": {
                     "useGravity": false
+                },
+                "collider": {
+                    "autoGenerate": true
                 }
             }
         },
@@ -320,6 +323,9 @@
                 },
                 "physics": {
                     "useGravity": false
+                },
+                "collider": {
+                    "autoGenerate": true
                 }
             }
         },
@@ -371,6 +377,9 @@
                 },
                 "physics": {
                     "useGravity": false
+                },
+                "collider": {
+                    "autoGenerate": true
                 }
             }
         },
@@ -422,6 +431,9 @@
                 },
                 "physics": {
                     "useGravity": false
+                },
+                "collider": {
+                    "autoGenerate": true
                 }
             }
         },
@@ -681,7 +693,7 @@
                     ],
                     "scale": [
                         1.0,
-                        1.0,
+                        0.5,
                         1.0
                     ]
                 },

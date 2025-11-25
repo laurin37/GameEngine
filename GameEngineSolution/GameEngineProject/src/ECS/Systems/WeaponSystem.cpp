@@ -34,7 +34,7 @@ void WeaponSystem::Update(float deltaTime) {
                     } else if (altFireInput && m_projectileMesh && m_projectileMaterial) {
                         FireProjectile(entity, transform);
                         weapon.timeSinceLastShot = 0.0f;
-                        // weapon.currentAmmo--; // Optional: consume ammo for projectiles too?
+                        weapon.currentAmmo--; 
                     }
                 }
             }
@@ -79,16 +79,16 @@ void WeaponSystem::FireProjectile(ECS::Entity entity, ECS::TransformComponent& t
     m_componentManager.AddComponent(projectile, ECS::RenderComponent{ m_projectileMesh, m_projectileMaterial });
     
     ECS::PhysicsComponent physics;
-    physics.useGravity = false; // "not effected from gravity"
+    physics.useGravity = true;
     physics.mass = 1.0f;
-    physics.velocity = { dir.x * 20.0f, dir.y * 20.0f, dir.z * 20.0f }; // Speed 20
+    physics.velocity = { dir.x * 10.0f, dir.y * 10.0f, dir.z * 10.0f }; // Speed 10
     physics.checkCollisions = false; // Handled by ProjectileSystem manually for now
     m_componentManager.AddComponent(projectile, physics);
 
     ECS::ProjectileComponent projComp;
     projComp.damage = 20.0f;
     projComp.lifetime = 5.0f;
-    projComp.speed = 20.0f;
+    projComp.speed = 10.0f;
     projComp.velocity = physics.velocity; // Redundant but used by ProjectileSystem
     m_componentManager.AddComponent(projectile, projComp);
 
@@ -98,9 +98,6 @@ void WeaponSystem::FireProjectile(ECS::Entity entity, ECS::TransformComponent& t
 void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, ECS::TransformComponent& transform) {
     weapon.timeSinceLastShot = 0.0f;
     weapon.currentAmmo--;
-
-    std::string bangMsg = std::format("BANG! Ammo: {}/{}", weapon.currentAmmo, weapon.maxAmmo);
-    DebugUIRenderer::AddMessage(bangMsg, 1.0f);
 
     // Calculate ray origin and direction
     // Origin is player position + camera offset (if any)

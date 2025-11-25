@@ -114,6 +114,15 @@ void DebugUIRenderer::Render(
             uiRenderer->DrawString(font, playerVelBuffer, 10.0f, yPos, 18.0f, yellow);
             yPos += lineHeight;
         }
+
+        // Show Ammo
+        ECS::WeaponComponent* playerWeapon = componentManager.GetComponentPtr<ECS::WeaponComponent>(playerEntity);
+        if (playerWeapon) {
+            char ammoBuffer[128];
+            snprintf(ammoBuffer, sizeof(ammoBuffer), "Ammo: %d / %d", playerWeapon->currentAmmo, playerWeapon->maxAmmo);
+            uiRenderer->DrawString(font, ammoBuffer, 10.0f, yPos, 24.0f, yellow);
+            yPos += lineHeight;
+        }
     }
 
     // Show active camera position
