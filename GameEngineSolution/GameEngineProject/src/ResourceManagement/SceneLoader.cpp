@@ -6,37 +6,14 @@
 #include <algorithm>
 #include <format>
 
+#include "../../include/Renderer/MeshUtils.h"
+
 // Helper to calculate AABB from mesh (same as in Scene.cpp)
 static ECS::ColliderComponent CalculateCollider(const Mesh* mesh) {
     ECS::ColliderComponent collider;
-    if (!mesh || mesh->GetVertexCount() == 0) return collider;
+    if (!mesh) return collider;
 
-    DirectX::XMFLOAT3 minPos = { FLT_MAX, FLT_MAX, FLT_MAX };
-    DirectX::XMFLOAT3 maxPos = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-
-    for (const auto& v : mesh->GetVertices()) {
-        minPos.x = (std::min)(minPos.x, v.pos.x);
-        minPos.y = (std::min)(minPos.y, v.pos.y);
-        minPos.z = (std::min)(minPos.z, v.pos.z);
-
-        maxPos.x = (std::max)(maxPos.x, v.pos.x);
-        maxPos.y = (std::max)(maxPos.y, v.pos.y);
-        maxPos.z = (std::max)(maxPos.z, v.pos.z);
-    }
-
-    // Calculate center and extents (half-size)
-    collider.localAABB.center = {
-        (minPos.x + maxPos.x) * 0.5f,
-        (minPos.y + maxPos.y) * 0.5f,
-        (minPos.z + maxPos.z) * 0.5f
-    };
-
-    collider.localAABB.extents = {
-        (maxPos.x - minPos.x) * 0.5f,
-        (maxPos.y - minPos.y) * 0.5f,
-        (maxPos.z - minPos.z) * 0.5f
-    };
-    
+    collider.localAABB = MeshUtils::CalculateAABB(mesh);
     collider.enabled = true;
     return collider;
 }

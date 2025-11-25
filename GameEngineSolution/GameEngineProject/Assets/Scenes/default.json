@@ -254,7 +254,7 @@
                 "transform": {
                     "position": [
                         6.0,
-                        3.5,
+                        5.0,
                         6.0
                     ],
                     "scale": [
@@ -305,7 +305,7 @@
                 "transform": {
                     "position": [
                         6.0,
-                        3.5,
+                        5.0,
                         -6.0
                     ],
                     "scale": [
@@ -356,7 +356,7 @@
                 "transform": {
                     "position": [
                         -6.0,
-                        3.5,
+                        5.0,
                         6.0
                     ],
                     "scale": [
@@ -407,7 +407,7 @@
                 "transform": {
                     "position": [
                         -6.0,
-                        3.5,
+                        5.0,
                         -6.0
                     ],
                     "scale": [

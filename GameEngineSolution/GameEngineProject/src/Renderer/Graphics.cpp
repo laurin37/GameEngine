@@ -3,7 +3,6 @@
 
 #include "../../include/Utils/EnginePCH.h"
 #include "../../include/Renderer/Graphics.h"
-#include "../../include/EntityComponentSystem/GameObject.h"
 #include "../../include/EntityComponentSystem/Camera.h"
 #include "../../include/Renderer/Mesh.h"
 #include "../../include/Renderer/Material.h"
