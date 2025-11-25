@@ -10,11 +10,12 @@
 // Forward Declarations
 class Graphics;
 class Camera;
-class GameObject;
 class VertexShader;
 class PixelShader;
 class Skybox;
 class PostProcess;
+class Mesh;
+class Material;
 struct DirectionalLight;
 struct PointLight;
 struct ID3D11Device;
@@ -32,19 +33,25 @@ class AssetManager; // Forward Declaration
 class Renderer
 {
 public:
+    struct RenderInstance
+    {
+        Mesh* mesh = nullptr;
+        Material* material = nullptr;
+        DirectX::XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 scale = { 1.0f, 1.0f, 1.0f };
+    };
+
     Renderer();
     ~Renderer();
 
     void Initialize(Graphics* graphics, AssetManager* assetManager, int width, int height);
     void RenderFrame(
         const Camera& camera,
-        const std::vector<std::unique_ptr<GameObject>>& gameObjects,
+        const std::vector<RenderInstance>& instances,
         const DirectionalLight& dirLight,
         const std::vector<PointLight>& pointLights
     );
-    void RenderDebug(
-        const Camera& camera,
-        const std::vector<std::unique_ptr<GameObject>>& gameObjects);
 
     void RenderDebugAABBs(
         const Camera& camera,
@@ -55,10 +62,10 @@ public:
 
 private:
     void InitPipeline(int width, int height);
-    void RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& gameObjects, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj);
+    void RenderShadowPass(const std::vector<RenderInstance>& instances, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj);
     void RenderMainPass(
         const Camera& camera,
-        const std::vector<std::unique_ptr<GameObject>>& gameObjects,
+        const std::vector<RenderInstance>& instances,
         const DirectX::XMMATRIX& lightViewProj,
         const DirectionalLight& dirLight,
         const std::vector<PointLight>& pointLights

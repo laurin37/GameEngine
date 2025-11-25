@@ -67,9 +67,9 @@
                     ]
                 },
                 "playerController": {
-                    "moveSpeed": 10.0,
-                    "jumpForce": 20.0,
-                    "mouseSensitivity": 0.001,
+                    "moveSpeed": 5.0,
+                    "jumpForce": 5.0,
+                    "mouseSensitivity": 0.0005,
                     "cameraHeight": 0.8
                 },
                 "camera": {

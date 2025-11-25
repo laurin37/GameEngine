@@ -3,11 +3,11 @@
 #include "../../include/Renderer/Graphics.h"
 #include "../../include/ResourceManagement/AssetManager.h"
 #include "../../include/EntityComponentSystem/Camera.h"
-#include "../../include/EntityComponentSystem/GameObject.h"
 #include "../../include/ResourceManagement/Shader.h"
 #include "../../include/Renderer/Skybox.h"
 #include "../../include/Renderer/PostProcess.h"
 #include "../../include/Renderer/Material.h"
+#include "../../include/Renderer/Mesh.h"
 #include "../../include/Physics/Collision.h"
 #include "../../include/Renderer/RenderingConstants.h"
 
@@ -27,9 +27,34 @@ void Renderer::Initialize(Graphics* graphics, AssetManager* assetManager, int wi
     InitPipeline(width, height);
 }
 
+namespace
+{
+    DirectX::XMMATRIX BuildWorldMatrix(const Renderer::RenderInstance& instance)
+    {
+        using namespace DirectX;
+        XMMATRIX scaleMatrix = XMMatrixScaling(instance.scale.x, instance.scale.y, instance.scale.z);
+        XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(instance.rotation.x, instance.rotation.y, instance.rotation.z);
+        XMMATRIX translationMatrix = XMMatrixTranslation(instance.position.x, instance.position.y, instance.position.z);
+        return scaleMatrix * rotationMatrix * translationMatrix;
+    }
+
+    void DrawInstance(ID3D11DeviceContext* context, const Renderer::RenderInstance& instance, ID3D11Buffer* psMaterialConstantBuffer)
+    {
+        if (instance.material)
+        {
+            instance.material->Bind(context, psMaterialConstantBuffer);
+        }
+
+        if (instance.mesh)
+        {
+            instance.mesh->Draw(context);
+        }
+    }
+}
+
 void Renderer::RenderFrame(
     const Camera& camera,
-    const std::vector<std::unique_ptr<GameObject>>& gameObjects,
+    const std::vector<RenderInstance>& instances,
     const DirectionalLight& dirLight,
     const std::vector<PointLight>& pointLights)
 {
@@ -45,7 +70,7 @@ void Renderer::RenderFrame(
     // 1. Render shadows first, as it uses its own render targets
     DirectX::XMMATRIX lightView = DirectX::XMMatrixIdentity();
     DirectX::XMMATRIX lightProj = DirectX::XMMatrixIdentity();
-    RenderShadowPass(gameObjects, lightView, lightProj);
+    RenderShadowPass(instances, lightView, lightProj);
 
     // 2. Unbind shader resources again before setting main render targets
     context->PSSetShaderResources(0, 3, nullSRVs);
@@ -54,7 +79,7 @@ void Renderer::RenderFrame(
     m_postProcess->Bind(context, dsv);  // This sets the post-process offscreen texture as render target
     
     // 4. Render scene to offscreen texture
-    RenderMainPass(camera, gameObjects, lightView * lightProj, dirLight, pointLights);
+    RenderMainPass(camera, instances, lightView * lightProj, dirLight, pointLights);
 
     // 5. Unbind shader resources before post-processing
     context->PSSetShaderResources(0, 3, nullSRVs);
@@ -210,7 +235,7 @@ void Renderer::InitPipeline(int width, int height)
     ThrowIfFailed(device->CreateDepthStencilState(&dssDesc, &m_depthDisabledDSS));
 }
 
-void Renderer::RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& gameObjects, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj)
+void Renderer::RenderShadowPass(const std::vector<RenderInstance>& instances, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj)
 {
     ID3D11DeviceContext* context = m_graphics->GetContext().Get();
 
@@ -235,23 +260,22 @@ void Renderer::RenderShadowPass(const std::vector<std::unique_ptr<GameObject>>& 
     context->PSSetShader(nullptr, nullptr, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    for (const auto& pGameObject : gameObjects)
+    for (const auto& instance : instances)
     {
-        if (!pGameObject) continue;
-        DirectX::XMMATRIX worldMatrix = pGameObject->GetWorldMatrix();
+        DirectX::XMMATRIX worldMatrix = BuildWorldMatrix(instance);
         DirectX::XMMATRIX wvp = worldMatrix * outLightView * outLightProj;
 
         DirectX::XMMATRIX wvpT = DirectX::XMMatrixTranspose(wvp);
         context->UpdateSubresource(m_cbShadowMatrix.Get(), 0, nullptr, &wvpT, 0, 0);
         context->VSSetConstantBuffers(0, 1, m_cbShadowMatrix.GetAddressOf());
 
-        pGameObject->Draw(context, m_psMaterialConstantBuffer.Get());
+        DrawInstance(context, instance, m_psMaterialConstantBuffer.Get());
     }
 }
 
 void Renderer::RenderMainPass(
     const Camera& camera,
-    const std::vector<std::unique_ptr<GameObject>>& gameObjects,
+    const std::vector<RenderInstance>& instances,
     const DirectX::XMMATRIX& lightViewProj,
     const DirectionalLight& dirLight,
     const std::vector<PointLight>& pointLights
@@ -297,10 +321,9 @@ void Renderer::RenderMainPass(
     m_mainPS->Bind(context);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    for (const auto& pGameObject : gameObjects)
+    for (const auto& instance : instances)
     {
-        if (!pGameObject) continue;
-        DirectX::XMMATRIX worldMatrix = pGameObject->GetWorldMatrix();
+        DirectX::XMMATRIX worldMatrix = BuildWorldMatrix(instance);
 
         CB_VS_vertexshader vs_cb;
         DirectX::XMStoreFloat4x4(&vs_cb.worldMatrix, DirectX::XMMatrixTranspose(worldMatrix));
@@ -311,62 +334,13 @@ void Renderer::RenderMainPass(
 
         context->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());
 
-        pGameObject->Draw(context, m_psMaterialConstantBuffer.Get());
+        DrawInstance(context, instance, m_psMaterialConstantBuffer.Get());
     }
 
     if (m_skybox)
     {
         m_skybox->Draw(context, camera, m_projectionMatrix);
     }
-}
-
-void Renderer::RenderDebug(
-    const Camera& camera,
-    const std::vector<std::unique_ptr<GameObject>>& gameObjects)
-{
-    ID3D11DeviceContext* context = m_graphics->GetContext().Get();
-
-    // Set wireframe mode
-    context->RSSetState(m_wireframeRS.Get());
-
-    // Bind debug shaders
-    m_debugVS->Bind(context);
-    m_debugPS->Bind(context);
-
-    // Get the cube mesh for drawing AABBs
-    auto debugCube = m_assetManager->GetDebugCube();
-    if (!debugCube) return;
-
-    // The debug vertex shader's Bind method already sets the correct input layout.
-    // We just need to set the topology for drawing lines.
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-
-    DirectX::XMMATRIX viewMatrix = camera.GetViewMatrix();
-
-    for (const auto& pGameObject : gameObjects)
-    {
-        if (!pGameObject) continue;
-
-        AABB worldAABB = pGameObject->GetWorldBoundingBox();
-
-        DirectX::XMMATRIX scale = DirectX::XMMatrixScaling(worldAABB.extents.x * 2.0f, worldAABB.extents.y * 2.0f, worldAABB.extents.z * 2.0f);
-        DirectX::XMMATRIX translate = DirectX::XMMatrixTranslation(worldAABB.center.x, worldAABB.center.y, worldAABB.center.z);
-        DirectX::XMMATRIX worldMatrix = scale * translate;
-
-        DirectX::XMMATRIX wvp = worldMatrix * viewMatrix * m_projectionMatrix;
-        
-        CB_VS_vertexshader vs_cb;
-        DirectX::XMStoreFloat4x4(&vs_cb.worldMatrix, DirectX::XMMatrixTranspose(wvp));
-        context->UpdateSubresource(m_vsConstantBuffer.Get(), 0, nullptr, &vs_cb, 0, 0);
-
-        context->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());
-
-        debugCube->Draw(context);
-    }
-
-    // Reset rasterizer state to default
-    context->RSSetState(nullptr);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void Renderer::RenderDebugAABBs(

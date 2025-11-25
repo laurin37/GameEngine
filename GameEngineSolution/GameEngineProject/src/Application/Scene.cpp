@@ -125,22 +125,25 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
 {
     if (!renderer || !uiRenderer) return;
 
-    // Create temporary GameObjects for ECS entities to use existing Renderer
-    std::vector<std::unique_ptr<GameObject>> ecsRenderObjects;
+    // Collect render instances directly from ECS data
+    std::vector<Renderer::RenderInstance> renderInstances;
     
     // Get all entities with Transform and Render components
     const auto& entities = m_ecsComponentManager.GetEntitiesWithRenderAndTransform();
+    renderInstances.reserve(entities.size());
     
     for (ECS::Entity entity : entities) {
         auto* transform = m_ecsComponentManager.GetTransform(entity);
         auto* render = m_ecsComponentManager.GetRender(entity);
         
         if (transform && render && render->mesh && render->material) {
-            auto obj = std::make_unique<GameObject>(render->mesh, render->material);
-            obj->SetPosition(transform->position.x, transform->position.y, transform->position.z);
-            obj->SetRotation(transform->rotation.x, transform->rotation.y, transform->rotation.z);
-            obj->SetScale(transform->scale.x, transform->scale.y, transform->scale.z);
-            ecsRenderObjects.push_back(std::move(obj));
+            Renderer::RenderInstance instance;
+            instance.mesh = render->mesh;
+            instance.material = render->material.get();
+            instance.position = transform->position;
+            instance.rotation = transform->rotation;
+            instance.scale = transform->scale;
+            renderInstances.push_back(instance);
         }
     }
     
@@ -184,7 +187,7 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
     }
     
     // Render scene
-    renderer->RenderFrame(tempCamera, ecsRenderObjects, m_dirLight, ecsLights);
+    renderer->RenderFrame(tempCamera, renderInstances, m_dirLight, ecsLights);
     
     // Render debug collision boxes
     if (showDebugCollision) {
