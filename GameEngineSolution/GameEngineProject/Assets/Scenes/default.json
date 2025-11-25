@@ -1,4 +1,110 @@
 {
+    "resources": {
+        "meshes": {
+            "cube": "Assets/Models/basic/cube.obj",
+            "cylinder": "Assets/Models/basic/cylinder.obj",
+            "cone": "Assets/Models/basic/cone.obj",
+            "sphere": "Assets/Models/basic/sphere.obj",
+            "torus": "Assets/Models/basic/torus.obj",
+            "room": "Assets/Models/room.obj"
+        },
+        "materials": {
+            "matFloor": {
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "specular": 0.2,
+                "shininess": 10.0,
+                "texture": "Assets/Textures/pine_bark_diff_4k.jpg",
+                "normalMap": "Assets/Textures/pine_bark_disp_4k.png"
+            },
+            "matPillar": {
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "specular": 0.8,
+                "shininess": 32.0,
+                "texture": "Assets/Textures/blue_metal_plate_diff_4k.jpg",
+                "normalMap": "Assets/Textures/blue_metal_plate_disp_4k.png"
+            },
+            "matRoof": {
+                "color": [
+                    0.8,
+                    0.1,
+                    0.1,
+                    1.0
+                ],
+                "specular": 0.8,
+                "shininess": 32.0
+            },
+            "matGold": {
+                "color": [
+                    1.0,
+                    0.8,
+                    0.0,
+                    1.0
+                ],
+                "specular": 1.0,
+                "shininess": 64.0
+            },
+            "matGlowing": {
+                "color": [
+                    2.0,
+                    2.0,
+                    2.0,
+                    1.0
+                ],
+                "specular": 1.0,
+                "shininess": 256.0
+            },
+            "matOrbRed": {
+                "color": [
+                    2.5,
+                    1.2,
+                    1.2,
+                    1.0
+                ],
+                "specular": 1.0,
+                "shininess": 256.0
+            },
+            "matOrbGreen": {
+                "color": [
+                    1.2,
+                    2.5,
+                    1.2,
+                    1.0
+                ],
+                "specular": 1.0,
+                "shininess": 256.0
+            },
+            "matOrbBlue": {
+                "color": [
+                    1.2,
+                    1.2,
+                    2.5,
+                    1.0
+                ],
+                "specular": 1.0,
+                "shininess": 256.0
+            },
+            "matOrbOrange": {
+                "color": [
+                    2.5,
+                    2.0,
+                    1.2,
+                    1.0
+                ],
+                "specular": 1.0,
+                "shininess": 256.0
+            }
+        }
+    },
     "entities": [
         {
             "name": "Floor",

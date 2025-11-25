@@ -49,6 +49,7 @@ public:
     bool HasField(const std::string& key) const;
     const JsonValue& GetField(const std::string& key) const;
     JsonValue& GetField(const std::string& key);
+    std::vector<std::string> GetMemberNames() const;
 
     // Array element access
     size_t ArraySize() const;

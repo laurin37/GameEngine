@@ -50,63 +50,23 @@ public:
     // Scene loading from JSON
     void LoadSceneFromJSON(const std::wstring& jsonPath);
 
-    // Debug UI control
+    // Debug UI
     void ToggleDebugUI() { m_debugUI.Toggle(); }
     bool IsDebugUIEnabled() const { return m_debugUI.IsEnabled(); }
-    void SetDebugUIEnabled(bool enabled) { m_debugUI.SetEnabled(enabled); }
 
 private:
-    // Asset lookup for JSON scene loading
-    std::unordered_map<std::string, Mesh*> BuildMeshLookup();
-    std::unordered_map<std::string, std::shared_ptr<Material>> BuildMaterialLookup();
     void RebuildRenderCache();
     void UpdateRenderCache();
+    void CreateRenderCacheEntry(ECS::Entity entity, const ECS::TransformComponent* transform, const ECS::RenderComponent* render);
     void RemoveRenderCacheEntry(size_t index);
     void RefreshRenderCacheEntry(size_t index, const ECS::TransformComponent* transform, const ECS::RenderComponent* render);
-    void CreateRenderCacheEntry(ECS::Entity entity, const ECS::TransformComponent* transform, const ECS::RenderComponent* render);
     bool TryComputeWorldBounds(ECS::Entity entity, const ECS::TransformComponent* transform, Renderer::RenderInstance& instance);
 
+public:
     // Non-owning pointers
     AssetManager* m_assetManager;
     Graphics* m_graphics;
     Input* m_input;
-
-    // Core systems
-    SimpleFont m_font;
-    std::unique_ptr<Crosshair> m_crosshair;
-    DebugUIRenderer m_debugUI;
-
-    // Meshes
-    std::shared_ptr<Mesh> m_meshCube;
-    std::shared_ptr<Mesh> m_meshCylinder;
-    std::shared_ptr<Mesh> m_meshCone;
-    std::shared_ptr<Mesh> m_meshSphere;
-    std::shared_ptr<Mesh> m_meshTorus;
-    std::shared_ptr<Mesh> m_meshRoom;
-
-    // Materials
-    std::shared_ptr<Material> m_matFloor;
-    std::shared_ptr<Material> m_matPillar;
-    std::shared_ptr<Material> m_matRoof;
-    std::shared_ptr<Material> m_matGold;
-    std::shared_ptr<Material> m_matGlowing;
-    std::shared_ptr<Material> m_matOrbRed;
-    std::shared_ptr<Material> m_matOrbGreen;
-    std::shared_ptr<Material> m_matOrbBlue;
-    std::shared_ptr<Material> m_matOrbOrange;
-
-    // Lighting
-    DirectionalLight m_dirLight;
-
-    // FPS tracking
-    int m_fps = 0;
-    int m_frameCount = 0;
-    float m_timeAccum = 0.0f;
-    
-    // ECS
-    ECS::ComponentManager m_ecsComponentManager;
-    ECS::SystemManager m_systemManager;
-    
     // Cached system pointers for direct access
     ECS::PhysicsSystem* m_ecsPhysicsSystem = nullptr;
     ECS::RenderSystem* m_ecsRenderSystem = nullptr;
@@ -128,4 +88,20 @@ private:
 
     std::vector<RenderCacheEntry> m_renderCache;
     std::unordered_map<ECS::Entity, size_t> m_entityToRenderCacheIndex;
+
+    DirectionalLight m_dirLight;
+    DebugUIRenderer m_debugUI;
+    
+    // ECS Managers
+    ECS::ComponentManager m_ecsComponentManager;
+    ECS::SystemManager m_systemManager;
+
+    // UI Elements
+    std::unique_ptr<Crosshair> m_crosshair;
+    SimpleFont m_font;
+
+    // FPS Calculation
+    float m_timeAccum = 0.0f;
+    int m_frameCount = 0;
+    int m_fps = 0;
 };

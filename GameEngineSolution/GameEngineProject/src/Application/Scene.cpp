@@ -39,97 +39,59 @@ Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input)
         m_ecsPlayerMovementSystem = m_systemManager.AddSystem<ECS::PlayerMovementSystem>(m_ecsComponentManager, *m_input);
         m_weaponSystem = m_systemManager.AddSystem<WeaponSystem>(m_ecsComponentManager, *m_input);
     }
-    
-    m_healthSystem = m_systemManager.AddSystem<HealthSystem>(m_ecsComponentManager);
     m_projectileSystem = m_systemManager.AddSystem<ProjectileSystem>(m_ecsComponentManager);
+    m_healthSystem = m_systemManager.AddSystem<HealthSystem>(m_ecsComponentManager);
     
     // 3. Rendering System (needs to be updated manually or last)
     m_ecsRenderSystem = m_systemManager.AddSystem<ECS::RenderSystem>(m_ecsComponentManager);
+
+    // Initialize UI
+    m_crosshair = std::make_unique<Crosshair>();
+    
+    // Load() is called explicitly by Game class
 }
 
 Scene::~Scene() = default;
 
 void Scene::Load()
 {
-    // Load all meshes
-    m_meshCube = m_assetManager->LoadMesh("Assets/Models/basic/cube.obj");
-    m_meshCylinder = m_assetManager->LoadMesh("Assets/Models/basic/cylinder.obj");
-    m_meshCone = m_assetManager->LoadMesh("Assets/Models/basic/cone.obj");
-    m_meshSphere = m_assetManager->LoadMesh("Assets/Models/basic/sphere.obj");
-    m_meshTorus = m_assetManager->LoadMesh("Assets/Models/basic/torus.obj");
-    m_meshRoom = m_assetManager->LoadMesh("Assets/Models/room.obj");
-    
-    // Load textures
-    auto texWood = m_assetManager->LoadTexture(L"Assets/Textures/pine_bark_diff_4k.jpg");
-    auto normWood = m_assetManager->LoadTexture(L"Assets/Textures/pine_bark_disp_4k.png");
-    auto texMetal = m_assetManager->LoadTexture(L"Assets/Textures/blue_metal_plate_diff_4k.jpg");
-    auto normMetal = m_assetManager->LoadTexture(L"Assets/Textures/blue_metal_plate_disp_4k.png");
-    
-    // Create materials
-    m_matFloor = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.2f, 10.0f, texWood, normWood);
-    m_matPillar = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.8f, 32.0f, texMetal, normMetal);
-    m_matRoof = std::make_shared<Material>(DirectX::XMFLOAT4(0.8f, 0.1f, 0.1f, 1.0f), 0.8f, 32.0f);
-    m_matGold = std::make_shared<Material>(DirectX::XMFLOAT4(1.0f, 0.8f, 0.0f, 1.0f), 1.0f, 64.0f);
-    m_matGlowing = std::make_shared<Material>(DirectX::XMFLOAT4(2.0f, 2.0f, 2.0f, 1.0f), 1.0f, 256.0f);
-    m_matOrbRed = std::make_shared<Material>(DirectX::XMFLOAT4(2.5f, 1.2f, 1.2f, 1.0f), 1.0f, 256.0f);
-    m_matOrbGreen = std::make_shared<Material>(DirectX::XMFLOAT4(1.2f, 2.5f, 1.2f, 1.0f), 1.0f, 256.0f);
-    m_matOrbBlue = std::make_shared<Material>(DirectX::XMFLOAT4(1.2f, 1.2f, 2.5f, 1.0f), 1.0f, 256.0f);
-    m_matOrbOrange = std::make_shared<Material>(DirectX::XMFLOAT4(2.5f, 2.0f, 1.2f, 1.0f), 1.0f, 256.0f);
-    
-    // Load font
-    if (m_graphics) {
-        try {
-            auto fontData = FontLoader::Load(m_graphics->GetDevice().Get(), m_graphics->GetContext().Get(), 
-                                            L"Assets/Textures/bitmap/Minecraft.ttf", L"Minecraft", 32.0f);
-            m_font.Initialize(fontData.texture, fontData.glyphs);
-        } catch (const std::exception&) {
-            auto debugFontTex = TextureLoader::CreateDebugFont(m_graphics->GetDevice().Get(), m_graphics->GetContext().Get());
-            m_font.Initialize(debugFontTex);
-        }
-    }
-    
-    // Initialize UI
-    m_crosshair = std::make_unique<Crosshair>();
-    
     // Load scene from JSON
     LoadSceneFromJSON(L"Assets/Scenes/default.json");
+
+    // Load Font
+    try {
+        FontData fontData = FontLoader::Load(
+            m_graphics->GetDevice().Get(), 
+            m_graphics->GetContext().Get(), 
+            L"Assets/Textures/bitmap/Minecraft.ttf", 
+            L"Minecraft", 
+            24.0f
+        );
+        m_font.Initialize(fontData.texture, fontData.glyphs);
+    } catch (const std::exception& e) {
+        // Log error but don't crash if font fails (UI will just be blocks)
+        // LOG_ERROR(e.what()); 
+    }
+
+    // Setup Weapon System assets (special case for now)
+    if (m_weaponSystem && m_assetManager) {
+        auto sphereMesh = m_assetManager->LoadMesh("Assets/Models/basic/sphere.obj");
+        
+        auto glowingMat = std::make_shared<Material>();
+        glowingMat->SetColor({ 2.0f, 2.0f, 2.0f, 1.0f });
+        glowingMat->SetSpecular(1.0f);
+        glowingMat->SetShininess(256.0f);
+        
+        m_weaponSystem->SetProjectileAssets(sphereMesh.get(), glowingMat);
+    }
+
     RebuildRenderCache();
 }
 
 void Scene::LoadSceneFromJSON(const std::wstring& jsonPath) {
-    auto meshLookup = BuildMeshLookup();
-    auto materialLookup = BuildMaterialLookup();
-    
-    SceneLoader::LoadScene(jsonPath, m_ecsComponentManager, meshLookup, materialLookup);
-}
-
-std::unordered_map<std::string, Mesh*> Scene::BuildMeshLookup() {
-    std::unordered_map<std::string, Mesh*> lookup;
-    
-    if (m_meshCube) lookup["cube"] = m_meshCube.get();
-    if (m_meshCylinder) lookup["cylinder"] = m_meshCylinder.get();
-    if (m_meshCone) lookup["cone"] = m_meshCone.get();
-    if (m_meshSphere) lookup["sphere"] = m_meshSphere.get();
-    if (m_meshTorus) lookup["torus"] = m_meshTorus.get();
-    if (m_meshRoom) lookup["room"] = m_meshRoom.get();
-    
-    return lookup;
-}
-
-std::unordered_map<std::string, std::shared_ptr<Material>> Scene::BuildMaterialLookup() {
-    std::unordered_map<std::string, std::shared_ptr<Material>> lookup;
-    
-    if (m_matFloor) lookup["matFloor"] = m_matFloor;
-    if (m_matPillar) lookup["matPillar"] = m_matPillar;
-    if (m_matRoof) lookup["matRoof"] = m_matRoof;
-    if (m_matGold) lookup["matGold"] = m_matGold;
-    if (m_matGlowing) lookup["matGlowing"] = m_matGlowing;
-    if (m_matOrbRed) lookup["matOrbRed"] = m_matOrbRed;
-    if (m_matOrbGreen) lookup["matOrbGreen"] = m_matOrbGreen;
-    if (m_matOrbBlue) lookup["matOrbBlue"] = m_matOrbBlue;
-    if (m_matOrbOrange) lookup["matOrbOrange"] = m_matOrbOrange;
-    
-    return lookup;
+    if (m_assetManager) {
+        SceneLoader::LoadScene(jsonPath, m_ecsComponentManager, m_assetManager);
+    }
 }
 
 void Scene::Update(float deltaTime)
@@ -145,13 +107,6 @@ void Scene::Update(float deltaTime)
     }
 
     // Update ECS systems via SystemManager
-    // This calls Update(deltaTime) on all registered systems
-    
-    // Ensure weapon system has assets (could be done once in Load, but simple here)
-    if (m_weaponSystem) {
-        m_weaponSystem->SetProjectileAssets(m_meshSphere.get(), m_matGlowing);
-    }
-
     m_systemManager.Update(deltaTime);
 }
 

@@ -65,6 +65,16 @@ JsonValue& JsonValue::GetField(const std::string& key) {
     return it->second;
 }
 
+std::vector<std::string> JsonValue::GetMemberNames() const {
+    if (m_type != JsonType::Object) throw std::runtime_error("JsonValue: expected Object");
+    std::vector<std::string> names;
+    names.reserve(m_objectValue->size());
+    for (const auto& pair : *m_objectValue) {
+        names.push_back(pair.first);
+    }
+    return names;
+}
+
 size_t JsonValue::ArraySize() const {
     if (m_type != JsonType::Array) throw std::runtime_error("JsonValue: expected Array");
     return m_arrayValue->size();

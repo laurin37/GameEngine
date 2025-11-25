@@ -11,6 +11,7 @@
 // Forward declarations
 class Mesh;
 class Material;
+class AssetManager;
 
 // ========================================
 // SceneLoader
@@ -19,14 +20,21 @@ class Material;
 class SceneLoader {
 public:
     // Load a scene from JSON file and populate the ComponentManager
+    // Load a scene from JSON file and populate the ComponentManager
     static void LoadScene(
         const std::wstring& jsonPath,
         ECS::ComponentManager& componentManager,
-        const std::unordered_map<std::string, Mesh*>& meshLookup,
-        const std::unordered_map<std::string, std::shared_ptr<Material>>& materialLookup
+        AssetManager* assetManager
     );
 
 private:
+    // Parse resources section (meshes, materials)
+    static void ParseResources(
+        const JsonValue& resources, 
+        AssetManager* assetManager,
+        std::unordered_map<std::string, Mesh*>& outMeshLookup,
+        std::unordered_map<std::string, std::shared_ptr<Material>>& outMaterialLookup
+    );
     // Component parsers (take JsonValue, return component structs)
     static ECS::TransformComponent ParseTransform(const JsonValue& j);
     static ECS::PhysicsComponent ParsePhysics(const JsonValue& j);

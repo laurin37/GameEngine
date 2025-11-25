@@ -25,10 +25,17 @@ public:
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureSRV = nullptr,
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalSRV = nullptr
 	);
+    Material() : m_data{ {1.0f, 1.0f, 1.0f, 1.0f}, 1.0f, 32.0f } {} // Default constructor
 	~Material() = default;
 
 	void Bind(ID3D11DeviceContext* context, ID3D11Buffer* psMaterialConstantBuffer) const;
-	void SetDiffuseColor(const DirectX::XMFLOAT4& color) { m_data.color = color; } // New method
+	void SetDiffuseColor(const DirectX::XMFLOAT4& color) { m_data.color = color; }
+    void SetColor(const DirectX::XMFLOAT4& color) { m_data.color = color; } // Alias for SetDiffuseColor
+    void SetSpecular(float intensity) { m_data.specularIntensity = intensity; }
+    void SetShininess(float power) { m_data.specularPower = power; }
+    
+    void SetTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv) { m_textureSRV = srv; }
+    void SetNormalMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv) { m_normalSRV = srv; }
 
 private:
 	CBuffer_PS_Material m_data;

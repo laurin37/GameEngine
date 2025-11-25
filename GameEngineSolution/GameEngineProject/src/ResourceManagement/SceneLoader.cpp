@@ -1,4 +1,5 @@
 #include "../../include/ResourceManagement/SceneLoader.h"
+#include "../../include/ResourceManagement/AssetManager.h"
 #include "../../include/Renderer/Mesh.h"
 #include "../../include/Renderer/Material.h"
 #include "../../include/Physics/Collision.h"
@@ -47,14 +48,22 @@ static ECS::ColliderComponent CalculateCollider(const Mesh* mesh) {
 void SceneLoader::LoadScene(
     const std::wstring& jsonPath,
     ECS::ComponentManager& componentManager,
-    const std::unordered_map<std::string, Mesh*>& meshLookup,
-    const std::unordered_map<std::string, std::shared_ptr<Material>>& materialLookup
+    AssetManager* assetManager
 ) {
     // Parse JSON file
     JsonValue root = JsonParser::ParseFile(jsonPath);
     
     if (!root.IsObject()) {
         throw std::runtime_error("Scene JSON root must be an object");
+    }
+
+    // Local lookups for this scene load
+    std::unordered_map<std::string, Mesh*> meshLookup;
+    std::unordered_map<std::string, std::shared_ptr<Material>> materialLookup;
+
+    // 1. Parse Resources (if present)
+    if (root.HasField("resources")) {
+        ParseResources(root.GetField("resources"), assetManager, meshLookup, materialLookup);
     }
     
     if (!root.HasField("entities")) {
@@ -161,6 +170,76 @@ void SceneLoader::LoadScene(
         if (components.HasField("projectile")) {
             ECS::ProjectileComponent projectile = ParseProjectile(components.GetField("projectile"));
             componentManager.AddComponent<ECS::ProjectileComponent>(entity, projectile);
+        }
+    }
+}
+
+void SceneLoader::ParseResources(
+    const JsonValue& resources,
+    AssetManager* assetManager,
+    std::unordered_map<std::string, Mesh*>& outMeshLookup,
+    std::unordered_map<std::string, std::shared_ptr<Material>>& outMaterialLookup
+) {
+    if (!assetManager) return;
+
+    // Parse Meshes
+    if (resources.HasField("meshes")) {
+        const JsonValue& meshes = resources.GetField("meshes");
+        if (meshes.IsObject()) {
+            std::vector<std::string> meshNames = meshes.GetMemberNames();
+            for (const auto& name : meshNames) {
+                std::string path = meshes.GetField(name).AsString();
+                // Load mesh via AssetManager
+                std::shared_ptr<Mesh> mesh = assetManager->LoadMesh(path);
+                if (mesh) {
+                    outMeshLookup[name] = mesh.get();
+                }
+            }
+        }
+    }
+
+    // Parse Materials
+    if (resources.HasField("materials")) {
+        const JsonValue& materials = resources.GetField("materials");
+        if (materials.IsObject()) {
+            std::vector<std::string> matNames = materials.GetMemberNames();
+            for (const auto& name : matNames) {
+                const JsonValue& matDef = materials.GetField(name);
+                if (!matDef.IsObject()) continue;
+
+                // Create material
+                auto material = std::make_shared<Material>();
+
+                // Properties
+                if (matDef.HasField("color")) {
+                    material->SetColor(ParseVec4(matDef.GetField("color"), {1.0f, 1.0f, 1.0f, 1.0f}));
+                }
+                
+                if (matDef.HasField("specular")) {
+                    material->SetSpecular(static_cast<float>(matDef.GetField("specular").AsNumber()));
+                }
+
+                if (matDef.HasField("shininess")) {
+                    material->SetShininess(static_cast<float>(matDef.GetField("shininess").AsNumber()));
+                }
+
+                // Textures
+                if (matDef.HasField("texture")) {
+                    std::string texPath = matDef.GetField("texture").AsString();
+                    std::wstring wTexPath(texPath.begin(), texPath.end());
+                    auto srv = assetManager->LoadTexture(wTexPath);
+                    if (srv) material->SetTexture(srv);
+                }
+
+                if (matDef.HasField("normalMap")) {
+                    std::string normPath = matDef.GetField("normalMap").AsString();
+                    std::wstring wNormPath(normPath.begin(), normPath.end());
+                    auto srv = assetManager->LoadTexture(wNormPath);
+                    if (srv) material->SetNormalMap(srv);
+                }
+
+                outMaterialLookup[name] = material;
+            }
         }
     }
 }
