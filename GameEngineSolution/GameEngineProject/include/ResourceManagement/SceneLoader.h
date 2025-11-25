@@ -13,13 +13,30 @@ class Mesh;
 class Material;
 class AssetManager;
 
-// ========================================
-// SceneLoader
-// Parses JSON scene files and creates ECS entities
-// ========================================
+// ==================================================================================
+// SceneLoader Class
+// ----------------------------------------------------------------------------------
+// Static utility class for loading scenes from JSON files.
+//
+// JSON Structure:
+// {
+//   "resources": {
+//     "meshes": { "meshName": "path/to/mesh.obj" },
+//     "materials": { "matName": { "color": [r,g,b,a], "texture": "path/to/tex.png" } }
+//   },
+//   "entities": [
+//     {
+//       "components": {
+//         "transform": { "position": [x,y,z], ... },
+//         "render": { "mesh": "meshName", "material": "matName" },
+//         ...
+//       }
+//     }
+//   ]
+// }
+// ==================================================================================
 class SceneLoader {
 public:
-    // Load a scene from JSON file and populate the ComponentManager
     // Load a scene from JSON file and populate the ComponentManager
     static void LoadScene(
         const std::wstring& jsonPath,

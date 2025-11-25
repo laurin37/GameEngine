@@ -43,6 +43,11 @@ bool Input::IsKeyDown(int key) const
     return m_keys[key];
 }
 
+bool Input::IsMouseButtonDown(int button) const
+{
+    return m_keys[button];
+}
+
 int Input::GetMouseDeltaX() const
 {
     return m_mouseState.dx;

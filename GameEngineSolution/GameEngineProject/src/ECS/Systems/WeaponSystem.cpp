@@ -22,11 +22,8 @@ void WeaponSystem::Update(float deltaTime) {
         // Check if this entity is controlled by player (has PlayerController)
         // Only player weapons respond to input for now
         if (m_componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
-            // TODO: Implement proper mouse button support in Input class
-            // For now, use VK_LBUTTON for both. 
-            // Note: IsKeyDown is "held down", so semi-auto might fire repeatedly if fireRate is low.
-            bool fireInput = m_input.IsKeyDown(VK_LBUTTON);
-            bool altFireInput = m_input.IsKeyDown(VK_RBUTTON);
+            bool fireInput = m_input.IsMouseButtonDown(VK_LBUTTON);
+            bool altFireInput = m_input.IsMouseButtonDown(VK_RBUTTON);
             
             if (weapon.timeSinceLastShot >= weapon.fireRate && weapon.currentAmmo > 0) {
                 if (m_componentManager.HasComponent<ECS::TransformComponent>(entity)) {

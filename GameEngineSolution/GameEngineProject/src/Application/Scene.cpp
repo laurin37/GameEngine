@@ -18,6 +18,7 @@
 #include "../../include/ECS/Systems/WeaponSystem.h"
 #include "../../include/ECS/Systems/ProjectileSystem.h"
 #include <format>
+#include "../../include/Config/GameConfig.h"
 #include <cmath>
 
 Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input)
@@ -55,17 +56,20 @@ Scene::~Scene() = default;
 
 void Scene::Load()
 {
+
+// ... (inside Load)
+
     // Load scene from JSON
-    LoadSceneFromJSON(L"Assets/Scenes/default.json");
+    LoadSceneFromJSON(Config::Paths::DefaultScene);
 
     // Load Font
     try {
         FontData fontData = FontLoader::Load(
             m_graphics->GetDevice().Get(), 
             m_graphics->GetContext().Get(), 
-            L"Assets/Textures/bitmap/Minecraft.ttf", 
-            L"Minecraft", 
-            24.0f
+            Config::Paths::DefaultFont, 
+            Config::UI::FontName,
+            Config::UI::FontSize
         );
         m_font.Initialize(fontData.texture, fontData.glyphs);
     } catch (const std::exception& e) {
@@ -75,7 +79,7 @@ void Scene::Load()
 
     // Setup Weapon System assets (special case for now)
     if (m_weaponSystem && m_assetManager) {
-        auto sphereMesh = m_assetManager->LoadMesh("Assets/Models/basic/sphere.obj");
+        auto sphereMesh = m_assetManager->LoadMesh(Config::Paths::DefaultProjectileMesh);
         
         auto glowingMat = std::make_shared<Material>();
         glowingMat->SetColor({ 2.0f, 2.0f, 2.0f, 1.0f });

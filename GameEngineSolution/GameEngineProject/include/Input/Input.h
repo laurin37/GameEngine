@@ -18,6 +18,7 @@ public:
     void Update();
 
     bool IsKeyDown(int key) const;
+    bool IsMouseButtonDown(int button) const;
     int GetMouseDeltaX() const;
     int GetMouseDeltaY() const;
 
