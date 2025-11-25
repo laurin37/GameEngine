@@ -7,7 +7,7 @@
 #include <cmath>
 #include <algorithm> // For std::max
 
-void WeaponSystem::Update(ECS::ComponentManager& componentManager, Input& input, float deltaTime) {
+void WeaponSystem::Update(ECS::ComponentManager& componentManager, Input& input, float deltaTime, Mesh* projectileMesh, std::shared_ptr<Material> projectileMaterial) {
     auto weaponArray = componentManager.GetComponentArray<ECS::WeaponComponent>();
     
     for (size_t i = 0; i < weaponArray->GetSize(); ++i) {
@@ -26,15 +26,76 @@ void WeaponSystem::Update(ECS::ComponentManager& componentManager, Input& input,
             // For now, use VK_LBUTTON for both. 
             // Note: IsKeyDown is "held down", so semi-auto might fire repeatedly if fireRate is low.
             bool fireInput = input.IsKeyDown(VK_LBUTTON);
+            bool altFireInput = input.IsKeyDown(VK_RBUTTON);
             
-            if (fireInput && weapon.timeSinceLastShot >= weapon.fireRate && weapon.currentAmmo > 0) {
+            if (weapon.timeSinceLastShot >= weapon.fireRate && weapon.currentAmmo > 0) {
                 if (componentManager.HasComponent<ECS::TransformComponent>(entity)) {
                     ECS::TransformComponent& transform = componentManager.GetComponent<ECS::TransformComponent>(entity);
-                    FireWeapon(entity, weapon, transform, componentManager);
+                    
+                    if (fireInput) {
+                        FireWeapon(entity, weapon, transform, componentManager);
+                    } else if (altFireInput && projectileMesh && projectileMaterial) {
+                        FireProjectile(entity, transform, componentManager, projectileMesh, projectileMaterial);
+                        weapon.timeSinceLastShot = 0.0f;
+                        // weapon.currentAmmo--; // Optional: consume ammo for projectiles too?
+                    }
                 }
             }
         }
     }
+}
+
+void WeaponSystem::FireProjectile(ECS::Entity entity, ECS::TransformComponent& transform, ECS::ComponentManager& componentManager, Mesh* mesh, std::shared_ptr<Material> material) {
+    // Create projectile entity
+    ECS::Entity projectile = componentManager.CreateEntity();
+    
+    // Calculate spawn position (same as ray origin)
+    DirectX::XMFLOAT3 spawnPos = transform.position;
+    if (componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
+        auto& pc = componentManager.GetComponent<ECS::PlayerControllerComponent>(entity);
+        spawnPos.y += pc.cameraHeight;
+    }
+
+    // Calculate direction
+    float pitch = transform.rotation.x;
+    float yaw = transform.rotation.y;
+    if (componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
+        pitch = componentManager.GetComponent<ECS::PlayerControllerComponent>(entity).viewPitch;
+    }
+
+    DirectX::XMFLOAT3 dir;
+    dir.x = cos(pitch) * sin(yaw);
+    dir.y = -sin(pitch);
+    dir.z = cos(pitch) * cos(yaw);
+
+    // Normalize
+    float len = sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
+    dir.x /= len; dir.y /= len; dir.z /= len;
+
+    // Offset spawn position slightly forward to avoid self-collision
+    spawnPos.x += dir.x * 1.0f;
+    spawnPos.y += dir.y * 1.0f;
+    spawnPos.z += dir.z * 1.0f;
+
+    // Add components
+    componentManager.AddComponent(projectile, ECS::TransformComponent{ spawnPos, {0,0,0}, {0.5f, 0.5f, 0.5f} });
+    componentManager.AddComponent(projectile, ECS::RenderComponent{ mesh, material });
+    
+    ECS::PhysicsComponent physics;
+    physics.useGravity = false; // "not effected from gravity"
+    physics.mass = 1.0f;
+    physics.velocity = { dir.x * 20.0f, dir.y * 20.0f, dir.z * 20.0f }; // Speed 20
+    physics.checkCollisions = false; // Handled by ProjectileSystem manually for now
+    componentManager.AddComponent(projectile, physics);
+
+    ECS::ProjectileComponent projComp;
+    projComp.damage = 20.0f;
+    projComp.lifetime = 5.0f;
+    projComp.speed = 20.0f;
+    projComp.velocity = physics.velocity; // Redundant but used by ProjectileSystem
+    componentManager.AddComponent(projectile, projComp);
+
+    std::cout << "Fired Projectile!" << std::endl;
 }
 
 void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, ECS::TransformComponent& transform, ECS::ComponentManager& componentManager) {

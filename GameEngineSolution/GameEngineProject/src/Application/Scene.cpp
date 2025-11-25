@@ -123,7 +123,7 @@ void Scene::Update(float deltaTime, Input& input)
     m_ecsCameraSystem.Update(m_ecsComponentManager);
     
     // Update FPS systems
-    m_weaponSystem.Update(m_ecsComponentManager, input, deltaTime);
+    m_weaponSystem.Update(m_ecsComponentManager, input, deltaTime, m_meshSphere.get(), m_matGlowing);
     m_projectileSystem.Update(m_ecsComponentManager, deltaTime);
     m_healthSystem.Update(m_ecsComponentManager, deltaTime);
 }
