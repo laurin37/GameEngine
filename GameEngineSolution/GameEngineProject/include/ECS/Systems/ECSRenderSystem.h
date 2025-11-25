@@ -3,7 +3,7 @@
 #include "../ComponentManager.h"
 #include "../System.h"
 #include "../../Renderer/Renderer.h"
-#include "../../EntityComponentSystem/Camera.h"
+#include "../../Renderer/Camera.h"
 
 namespace ECS {
 

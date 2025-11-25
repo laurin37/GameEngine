@@ -13,7 +13,7 @@ set(SOURCE_FILES
     "GameEngineSolution/GameEngineProject/src/main.cpp"
     "GameEngineSolution/GameEngineProject/src/Application/Game.cpp"
     "GameEngineSolution/GameEngineProject/src/Application/Scene.cpp"
-    "GameEngineSolution/GameEngineProject/src/EntityComponentSystem/Camera.cpp"
+    "GameEngineSolution/GameEngineProject/src/Renderer/Camera.cpp"
     "GameEngineSolution/GameEngineProject/src/Input/Input.cpp"
     "GameEngineSolution/GameEngineProject/src/Platform/Window.cpp"
     "GameEngineSolution/GameEngineProject/src/Renderer/BloomEffect.cpp"

@@ -4,7 +4,7 @@
 #include "../../include/Renderer/Skybox.h"
 #include "../../include/Renderer/Mesh.h"
 #include "../../include/ResourceManagement/Shader.h"
-#include "../../include/EntityComponentSystem/Camera.h"
+#include "../../include/Renderer/Camera.h"
 #include "../../include/ResourceManagement/TextureLoader.h"
 
 // Constant buffer for skybox vertex shader

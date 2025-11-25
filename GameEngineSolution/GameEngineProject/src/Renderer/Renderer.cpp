@@ -2,7 +2,7 @@
 #include "../../include/Renderer/Renderer.h"
 #include "../../include/Renderer/Graphics.h"
 #include "../../include/ResourceManagement/AssetManager.h"
-#include "../../include/EntityComponentSystem/Camera.h"
+#include "../../include/Renderer/Camera.h"
 #include "../../include/ResourceManagement/Shader.h"
 #include "../../include/Renderer/Skybox.h"
 #include "../../include/Renderer/PostProcess.h"

@@ -3,7 +3,7 @@
 
 #include "../../include/Utils/EnginePCH.h"
 #include "../../include/Renderer/Graphics.h"
-#include "../../include/EntityComponentSystem/Camera.h"
+#include "../../include/Renderer/Camera.h"
 #include "../../include/Renderer/Mesh.h"
 #include "../../include/Renderer/Material.h"
 #include "../../include/Renderer/Skybox.h"

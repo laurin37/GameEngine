@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "../../include/EntityComponentSystem/Camera.h"
+#include "../../include/Renderer/Camera.h"
 
 using namespace DirectX;
 

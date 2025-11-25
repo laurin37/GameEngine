@@ -7,7 +7,7 @@
 #include <string>
 #include <DirectXMath.h>
 
-#include "../EntityComponentSystem/Camera.h"
+#include "../Renderer/Camera.h"
 #include "../UI/SimpleFont.h"
 #include "../UI/Crosshair.h"
 #include "../UI/DebugUIRenderer.h"
