@@ -131,4 +131,29 @@ void DebugUIRenderer::Render(
             yPos += lineHeight;
         }
     }
+
+    // Show Health of all entities
+    auto healthArray = componentManager.GetComponentArray<ECS::HealthComponent>();
+    if (healthArray && healthArray->GetSize() > 0) {
+        yPos += lineHeight; // Add some spacing
+        uiRenderer->DrawString(font, "--- Health Status ---", 10.0f, yPos, 20.0f, white);
+        yPos += lineHeight;
+
+        for (size_t i = 0; i < healthArray->GetSize(); ++i) {
+            ECS::Entity entity = healthArray->GetEntityAtIndex(i);
+            ECS::HealthComponent& health = healthArray->GetData(entity);
+
+            char healthBuffer[128];
+            snprintf(healthBuffer, sizeof(healthBuffer), "Entity %d: %.1f / %.1f %s", 
+                entity, health.currentHealth, health.maxHealth, health.isDead ? "(DEAD)" : "");
+            
+            // Color code based on health
+            float* color = green;
+            if (health.isDead) color = white; // Greyed out/White for dead
+            else if (health.currentHealth < health.maxHealth * 0.3f) color = orange; // Low health
+
+            uiRenderer->DrawString(font, healthBuffer, 10.0f, yPos, 18.0f, color);
+            yPos += lineHeight;
+        }
+    }
 }

@@ -121,6 +121,11 @@ void Scene::Update(float deltaTime, Input& input)
     m_ecsPhysicsSystem.Update(m_ecsComponentManager, deltaTime);
     m_ecsMovementSystem.Update(m_ecsComponentManager, deltaTime);
     m_ecsCameraSystem.Update(m_ecsComponentManager);
+    
+    // Update FPS systems
+    m_weaponSystem.Update(m_ecsComponentManager, input, deltaTime);
+    m_projectileSystem.Update(m_ecsComponentManager, deltaTime);
+    m_healthSystem.Update(m_ecsComponentManager, deltaTime);
 }
 
 void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCollision)

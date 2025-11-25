@@ -19,6 +19,9 @@
 #include "../ECS/Systems/ECSMovementSystem.h"
 #include "../ECS/Systems/PlayerMovementSystem.h"
 #include "../ECS/Systems/CameraSystem.h"
+#include "../ECS/Systems/HealthSystem.h"
+#include "../ECS/Systems/WeaponSystem.h"
+#include "../ECS/Systems/ProjectileSystem.h"
 
 // Forward declarations
 class AssetManager;
@@ -101,6 +104,9 @@ private:
     ECS::MovementSystem m_ecsMovementSystem;
     ECS::PlayerMovementSystem m_ecsPlayerMovementSystem;
     ECS::CameraSystem m_ecsCameraSystem;
+    HealthSystem m_healthSystem;
+    WeaponSystem m_weaponSystem;
+    ProjectileSystem m_projectileSystem;
 
     struct RenderCacheEntry
     {

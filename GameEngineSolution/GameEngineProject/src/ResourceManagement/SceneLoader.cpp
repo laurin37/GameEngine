@@ -144,6 +144,24 @@ void SceneLoader::LoadScene(
             ECS::CameraComponent camera = ParseCamera(components.GetField("camera"));
             componentManager.AddComponent<ECS::CameraComponent>(entity, camera);
         }
+
+        // Parse Health
+        if (components.HasField("health")) {
+            ECS::HealthComponent health = ParseHealth(components.GetField("health"));
+            componentManager.AddComponent<ECS::HealthComponent>(entity, health);
+        }
+
+        // Parse Weapon
+        if (components.HasField("weapon")) {
+            ECS::WeaponComponent weapon = ParseWeapon(components.GetField("weapon"));
+            componentManager.AddComponent<ECS::WeaponComponent>(entity, weapon);
+        }
+
+        // Parse Projectile
+        if (components.HasField("projectile")) {
+            ECS::ProjectileComponent projectile = ParseProjectile(components.GetField("projectile"));
+            componentManager.AddComponent<ECS::ProjectileComponent>(entity, projectile);
+        }
     }
 }
 
@@ -384,6 +402,78 @@ ECS::PlayerControllerComponent SceneLoader::ParsePlayerController(const JsonValu
     }
     
     return controller;
+}
+
+ECS::HealthComponent SceneLoader::ParseHealth(const JsonValue& j) {
+    ECS::HealthComponent health;
+    
+    if (j.HasField("maxHealth")) {
+        health.maxHealth = static_cast<float>(j.GetField("maxHealth").AsNumber());
+        health.currentHealth = health.maxHealth; // Default current to max
+    }
+    
+    if (j.HasField("currentHealth")) {
+        health.currentHealth = static_cast<float>(j.GetField("currentHealth").AsNumber());
+    }
+    
+    if (j.HasField("regenerationRate")) {
+        health.regenerationRate = static_cast<float>(j.GetField("regenerationRate").AsNumber());
+    }
+    
+    return health;
+}
+
+ECS::WeaponComponent SceneLoader::ParseWeapon(const JsonValue& j) {
+    ECS::WeaponComponent weapon;
+    
+    if (j.HasField("damage")) {
+        weapon.damage = static_cast<float>(j.GetField("damage").AsNumber());
+    }
+    
+    if (j.HasField("range")) {
+        weapon.range = static_cast<float>(j.GetField("range").AsNumber());
+    }
+    
+    if (j.HasField("fireRate")) {
+        weapon.fireRate = static_cast<float>(j.GetField("fireRate").AsNumber());
+    }
+    
+    if (j.HasField("maxAmmo")) {
+        weapon.maxAmmo = static_cast<int>(j.GetField("maxAmmo").AsNumber());
+        weapon.currentAmmo = weapon.maxAmmo;
+    }
+    
+    if (j.HasField("currentAmmo")) {
+        weapon.currentAmmo = static_cast<int>(j.GetField("currentAmmo").AsNumber());
+    }
+    
+    if (j.HasField("isAutomatic")) {
+        weapon.isAutomatic = j.GetField("isAutomatic").AsBool();
+    }
+    
+    return weapon;
+}
+
+ECS::ProjectileComponent SceneLoader::ParseProjectile(const JsonValue& j) {
+    ECS::ProjectileComponent projectile;
+    
+    if (j.HasField("speed")) {
+        projectile.speed = static_cast<float>(j.GetField("speed").AsNumber());
+    }
+    
+    if (j.HasField("lifetime")) {
+        projectile.lifetime = static_cast<float>(j.GetField("lifetime").AsNumber());
+    }
+    
+    if (j.HasField("damage")) {
+        projectile.damage = static_cast<float>(j.GetField("damage").AsNumber());
+    }
+    
+    if (j.HasField("explosionRadius")) {
+        projectile.explosionRadius = static_cast<float>(j.GetField("explosionRadius").AsNumber());
+    }
+    
+    return projectile;
 }
 
 // ========================================

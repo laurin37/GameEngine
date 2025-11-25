@@ -120,4 +120,41 @@ struct CameraComponent {
     DirectX::XMFLOAT4X4 projectionMatrix;
 };
 
+// ========================================
+// Health Component
+// Manages entity health and death state
+// ========================================
+struct HealthComponent {
+    float currentHealth = 100.0f;
+    float maxHealth = 100.0f;
+    bool isDead = false;
+    float regenerationRate = 0.0f; // Health per second
+};
+
+// ========================================
+// Weapon Component
+// Hitscan weapon properties
+// ========================================
+struct WeaponComponent {
+    float damage = 10.0f;
+    float range = 100.0f;
+    float fireRate = 0.5f;        // Seconds between shots
+    float timeSinceLastShot = 0.0f;
+    int currentAmmo = 30;
+    int maxAmmo = 30;
+    bool isAutomatic = false;
+};
+
+// ========================================
+// Projectile Component
+// Projectile physics and damage
+// ========================================
+struct ProjectileComponent {
+    DirectX::XMFLOAT3 velocity = { 0.0f, 0.0f, 0.0f };
+    float speed = 20.0f;
+    float lifetime = 5.0f;        // Seconds until auto-destroy
+    float damage = 20.0f;
+    float explosionRadius = 0.0f; // 0 = single target, >0 = AoE
+};
+
 } // namespace ECS
