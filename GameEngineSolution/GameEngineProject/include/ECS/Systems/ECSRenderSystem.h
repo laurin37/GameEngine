@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ComponentManager.h"
+#include "../System.h"
 #include "../../Renderer/Renderer.h"
 #include "../../EntityComponentSystem/Camera.h"
 
@@ -11,15 +12,15 @@ namespace ECS {
 // Handles rendering for entities with
 // RenderComponent + TransformComponent
 // ========================================
-class RenderSystem {
+class RenderSystem : public System {
 public:
-    RenderSystem() = default;
+    explicit RenderSystem(ComponentManager& cm) : System(cm) {}
     
     // Render all renderable entities
-    void Render(ComponentManager& cm, Renderer* renderer, Camera& camera);
+    void Render(Renderer* renderer, Camera& camera);
     
     // Debug rendering (bounding boxes)
-    void RenderDebug(ComponentManager& cm, Renderer* renderer, Camera& camera);
+    void RenderDebug(Renderer* renderer, Camera& camera);
 };
 
 } // namespace ECS

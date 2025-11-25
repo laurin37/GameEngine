@@ -9,14 +9,42 @@
 #include "../../include/ResourceManagement/SceneLoader.h"
 #include "../../include/Input/Input.h"
 #include "../../include/Renderer/PostProcess.h"
+#include "../../include/ECS/Systems/ECSPhysicsSystem.h"
+#include "../../include/ECS/Systems/ECSRenderSystem.h"
+#include "../../include/ECS/Systems/ECSMovementSystem.h"
+#include "../../include/ECS/Systems/PlayerMovementSystem.h"
+#include "../../include/ECS/Systems/CameraSystem.h"
+#include "../../include/ECS/Systems/HealthSystem.h"
+#include "../../include/ECS/Systems/WeaponSystem.h"
+#include "../../include/ECS/Systems/ProjectileSystem.h"
 #include <format>
 #include <cmath>
 
-Scene::Scene(AssetManager* assetManager, Graphics* graphics)
+Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input)
     : m_assetManager(assetManager), 
       m_graphics(graphics),
+      m_input(input),
       m_dirLight{ {0.5f, -0.7f, 0.5f, 0.0f}, {0.2f, 0.2f, 0.3f, 1.0f} }
 {
+    // Initialize Systems
+    // Note: Order matters for Update() calls in SystemManager
+    
+    // 1. Core Systems
+    m_ecsPhysicsSystem = m_systemManager.AddSystem<ECS::PhysicsSystem>(m_ecsComponentManager);
+    m_ecsMovementSystem = m_systemManager.AddSystem<ECS::MovementSystem>(m_ecsComponentManager);
+    m_ecsCameraSystem = m_systemManager.AddSystem<ECS::CameraSystem>(m_ecsComponentManager);
+    
+    // 2. Gameplay Systems (depend on Input)
+    if (m_input) {
+        m_ecsPlayerMovementSystem = m_systemManager.AddSystem<ECS::PlayerMovementSystem>(m_ecsComponentManager, *m_input);
+        m_weaponSystem = m_systemManager.AddSystem<WeaponSystem>(m_ecsComponentManager, *m_input);
+    }
+    
+    m_healthSystem = m_systemManager.AddSystem<HealthSystem>(m_ecsComponentManager);
+    m_projectileSystem = m_systemManager.AddSystem<ProjectileSystem>(m_ecsComponentManager);
+    
+    // 3. Rendering System (needs to be updated manually or last)
+    m_ecsRenderSystem = m_systemManager.AddSystem<ECS::RenderSystem>(m_ecsComponentManager);
 }
 
 Scene::~Scene() = default;
@@ -104,7 +132,7 @@ std::unordered_map<std::string, std::shared_ptr<Material>> Scene::BuildMaterialL
     return lookup;
 }
 
-void Scene::Update(float deltaTime, Input& input)
+void Scene::Update(float deltaTime)
 {
     // FPS calculation
     m_frameCount++;
@@ -116,16 +144,15 @@ void Scene::Update(float deltaTime, Input& input)
         m_timeAccum -= 1.0f;
     }
 
-    // Update ECS systems
-    m_ecsPlayerMovementSystem.Update(m_ecsComponentManager, input, deltaTime);
-    m_ecsPhysicsSystem.Update(m_ecsComponentManager, deltaTime);
-    m_ecsMovementSystem.Update(m_ecsComponentManager, deltaTime);
-    m_ecsCameraSystem.Update(m_ecsComponentManager);
+    // Update ECS systems via SystemManager
+    // This calls Update(deltaTime) on all registered systems
     
-    // Update FPS systems
-    m_weaponSystem.Update(m_ecsComponentManager, input, deltaTime, m_meshSphere.get(), m_matGlowing);
-    m_projectileSystem.Update(m_ecsComponentManager, deltaTime);
-    m_healthSystem.Update(m_ecsComponentManager, deltaTime);
+    // Ensure weapon system has assets (could be done once in Load, but simple here)
+    if (m_weaponSystem) {
+        m_weaponSystem->SetProjectileAssets(m_meshSphere.get(), m_matGlowing);
+    }
+
+    m_systemManager.Update(deltaTime);
 }
 
 void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCollision)
@@ -166,9 +193,9 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
     DirectX::XMMATRIX ecsView, ecsProj;
     Camera tempCamera;  // Temporary adapter
     
-    if (m_ecsCameraSystem.GetActiveCamera(m_ecsComponentManager, ecsView, ecsProj)) {
+    if (m_ecsCameraSystem->GetActiveCamera(ecsView, ecsProj)) {
         // Find player entity with camera to get position/rotation
-        ECS::Entity cameraEntity = m_ecsCameraSystem.GetActiveCameraEntity(m_ecsComponentManager);
+        ECS::Entity cameraEntity = m_ecsCameraSystem->GetActiveCameraEntity();
         
         if (m_ecsComponentManager.HasComponent<ECS::TransformComponent>(cameraEntity)) {
             auto& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(cameraEntity);
@@ -198,7 +225,7 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
     
     // Render debug collision boxes
     if (showDebugCollision) {
-        m_ecsRenderSystem.RenderDebug(m_ecsComponentManager, renderer, tempCamera);
+        m_ecsRenderSystem->RenderDebug(renderer, tempCamera);
     }
     
     // Render UI
@@ -210,7 +237,7 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
 
     // Render debug UI (can be toggled with F1)
     if (m_debugUI.IsEnabled()) {
-        ECS::Entity activeCamera = m_ecsCameraSystem.GetActiveCameraEntity(m_ecsComponentManager);
+        ECS::Entity activeCamera = m_ecsCameraSystem->GetActiveCameraEntity();
         m_debugUI.Render(
             uiRenderer, 
             m_font, 

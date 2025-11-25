@@ -14,14 +14,19 @@
 #include "../Renderer/Graphics.h"
 #include "../Renderer/Renderer.h"
 #include "../ECS/ComponentManager.h"
-#include "../ECS/Systems/ECSPhysicsSystem.h"
-#include "../ECS/Systems/ECSRenderSystem.h"
-#include "../ECS/Systems/ECSMovementSystem.h"
-#include "../ECS/Systems/PlayerMovementSystem.h"
-#include "../ECS/Systems/CameraSystem.h"
-#include "../ECS/Systems/HealthSystem.h"
-#include "../ECS/Systems/WeaponSystem.h"
-#include "../ECS/Systems/ProjectileSystem.h"
+#include "../ECS/SystemManager.h"
+
+// Forward declarations for Systems
+namespace ECS {
+    class PhysicsSystem;
+    class RenderSystem;
+    class MovementSystem;
+    class PlayerMovementSystem;
+    class CameraSystem;
+}
+class HealthSystem;
+class WeaponSystem;
+class ProjectileSystem;
 
 // Forward declarations
 class AssetManager;
@@ -35,11 +40,11 @@ struct DirectionalLight;
 class Scene
 {
 public:
-    Scene(AssetManager* assetManager, Graphics* graphics);
+    Scene(AssetManager* assetManager, Graphics* graphics, Input* input);
     ~Scene();
 
     void Load();
-    void Update(float deltaTime, Input& input);
+    void Update(float deltaTime);
     void Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCollision = false);
     
     // Scene loading from JSON
@@ -64,6 +69,7 @@ private:
     // Non-owning pointers
     AssetManager* m_assetManager;
     Graphics* m_graphics;
+    Input* m_input;
 
     // Core systems
     SimpleFont m_font;
@@ -99,14 +105,17 @@ private:
     
     // ECS
     ECS::ComponentManager m_ecsComponentManager;
-    ECS::PhysicsSystem m_ecsPhysicsSystem;
-    ECS::RenderSystem m_ecsRenderSystem;
-    ECS::MovementSystem m_ecsMovementSystem;
-    ECS::PlayerMovementSystem m_ecsPlayerMovementSystem;
-    ECS::CameraSystem m_ecsCameraSystem;
-    HealthSystem m_healthSystem;
-    WeaponSystem m_weaponSystem;
-    ProjectileSystem m_projectileSystem;
+    ECS::SystemManager m_systemManager;
+    
+    // Cached system pointers for direct access
+    ECS::PhysicsSystem* m_ecsPhysicsSystem = nullptr;
+    ECS::RenderSystem* m_ecsRenderSystem = nullptr;
+    ECS::MovementSystem* m_ecsMovementSystem = nullptr;
+    ECS::PlayerMovementSystem* m_ecsPlayerMovementSystem = nullptr;
+    ECS::CameraSystem* m_ecsCameraSystem = nullptr;
+    HealthSystem* m_healthSystem = nullptr;
+    WeaponSystem* m_weaponSystem = nullptr;
+    ProjectileSystem* m_projectileSystem = nullptr;
 
     struct RenderCacheEntry
     {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ComponentManager.h"
+#include "../System.h"
 
 namespace ECS {
 
@@ -9,12 +10,12 @@ namespace ECS {
 // Handles physics simulation for entities
 // with PhysicsComponent + TransformComponent
 // ========================================
-class PhysicsSystem {
+class PhysicsSystem : public System {
 public:
-    PhysicsSystem() = default;
+    explicit PhysicsSystem(ComponentManager& cm) : System(cm) {}
     
     // Update all physics entities
-    void Update(ComponentManager& cm, float deltaTime);
+    void Update(float deltaTime) override;
     
 private:
     // Physics sub-steps
@@ -24,7 +25,7 @@ private:
     void IntegrateVelocity(TransformComponent& transform, PhysicsComponent& physics, float dt);
     
     // Collision (simplified - no GameObject dependency)
-    void CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics, ComponentManager& cm);
+    void CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics);
     
     // Physics constants
     static constexpr float MIN_DELTA_TIME = 0.0001f;

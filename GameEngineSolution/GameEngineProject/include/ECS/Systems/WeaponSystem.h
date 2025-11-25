@@ -1,15 +1,28 @@
 #pragma once
 
 #include "../ComponentManager.h"
+#include "../System.h"
 #include "../../Input/Input.h"
 
-class WeaponSystem {
+class WeaponSystem : public ECS::System {
 public:
-    void Update(ECS::ComponentManager& componentManager, Input& input, float deltaTime, Mesh* projectileMesh = nullptr, std::shared_ptr<Material> projectileMaterial = nullptr);
+    WeaponSystem(ECS::ComponentManager& cm, Input& input) 
+        : ECS::System(cm), m_input(input) {}
+
+    void SetProjectileAssets(Mesh* mesh, std::shared_ptr<Material> material) {
+        m_projectileMesh = mesh;
+        m_projectileMaterial = material;
+    }
+
+    void Update(float deltaTime) override;
 
 private:
-    void FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, ECS::TransformComponent& transform, ECS::ComponentManager& componentManager);
-    void FireProjectile(ECS::Entity entity, ECS::TransformComponent& transform, ECS::ComponentManager& componentManager, Mesh* mesh, std::shared_ptr<Material> material);
+    Input& m_input;
+    Mesh* m_projectileMesh = nullptr;
+    std::shared_ptr<Material> m_projectileMaterial = nullptr;
+
+    void FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, ECS::TransformComponent& transform);
+    void FireProjectile(ECS::Entity entity, ECS::TransformComponent& transform);
     
     // Simple ray-AABB intersection for hit detection
     bool RayAABBIntersect(

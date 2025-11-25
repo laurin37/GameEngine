@@ -3,17 +3,17 @@
 
 namespace ECS {
 
-void MovementSystem::Update(ComponentManager& cm, float deltaTime) {
+void MovementSystem::Update(float deltaTime) {
     // --- Handle Rotation ---
-    auto rotateArray = cm.GetComponentArray<RotateComponent>();
+    auto rotateArray = m_componentManager.GetComponentArray<RotateComponent>();
     auto& rotateVec = rotateArray->GetComponentArray();
     
     for (size_t i = 0; i < rotateVec.size(); ++i) {
         Entity entity = rotateArray->GetEntityAtIndex(i);
         RotateComponent& rotate = rotateVec[i];
         
-        if (!cm.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = cm.GetComponent<TransformComponent>(entity);
+        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
+        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Simple Euler integration for rotation
         transform.rotation.x += rotate.axis.x * rotate.speed * deltaTime;
@@ -22,15 +22,15 @@ void MovementSystem::Update(ComponentManager& cm, float deltaTime) {
     }
 
     // --- Handle Orbiting ---
-    auto orbitArray = cm.GetComponentArray<OrbitComponent>();
+    auto orbitArray = m_componentManager.GetComponentArray<OrbitComponent>();
     auto& orbitVec = orbitArray->GetComponentArray();
     
     for (size_t i = 0; i < orbitVec.size(); ++i) {
         Entity entity = orbitArray->GetEntityAtIndex(i);
         OrbitComponent& orbit = orbitVec[i];
         
-        if (!cm.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = cm.GetComponent<TransformComponent>(entity);
+        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
+        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Update angle
         orbit.angle += orbit.speed * deltaTime;

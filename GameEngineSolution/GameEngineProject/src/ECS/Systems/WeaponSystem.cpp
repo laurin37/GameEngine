@@ -7,8 +7,8 @@
 #include <cmath>
 #include <algorithm> // For std::max
 
-void WeaponSystem::Update(ECS::ComponentManager& componentManager, Input& input, float deltaTime, Mesh* projectileMesh, std::shared_ptr<Material> projectileMaterial) {
-    auto weaponArray = componentManager.GetComponentArray<ECS::WeaponComponent>();
+void WeaponSystem::Update(float deltaTime) {
+    auto weaponArray = m_componentManager.GetComponentArray<ECS::WeaponComponent>();
     
     for (size_t i = 0; i < weaponArray->GetSize(); ++i) {
         ECS::Entity entity = weaponArray->GetEntityAtIndex(i);
@@ -21,21 +21,21 @@ void WeaponSystem::Update(ECS::ComponentManager& componentManager, Input& input,
 
         // Check if this entity is controlled by player (has PlayerController)
         // Only player weapons respond to input for now
-        if (componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
+        if (m_componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
             // TODO: Implement proper mouse button support in Input class
             // For now, use VK_LBUTTON for both. 
             // Note: IsKeyDown is "held down", so semi-auto might fire repeatedly if fireRate is low.
-            bool fireInput = input.IsKeyDown(VK_LBUTTON);
-            bool altFireInput = input.IsKeyDown(VK_RBUTTON);
+            bool fireInput = m_input.IsKeyDown(VK_LBUTTON);
+            bool altFireInput = m_input.IsKeyDown(VK_RBUTTON);
             
             if (weapon.timeSinceLastShot >= weapon.fireRate && weapon.currentAmmo > 0) {
-                if (componentManager.HasComponent<ECS::TransformComponent>(entity)) {
-                    ECS::TransformComponent& transform = componentManager.GetComponent<ECS::TransformComponent>(entity);
+                if (m_componentManager.HasComponent<ECS::TransformComponent>(entity)) {
+                    ECS::TransformComponent& transform = m_componentManager.GetComponent<ECS::TransformComponent>(entity);
                     
                     if (fireInput) {
-                        FireWeapon(entity, weapon, transform, componentManager);
-                    } else if (altFireInput && projectileMesh && projectileMaterial) {
-                        FireProjectile(entity, transform, componentManager, projectileMesh, projectileMaterial);
+                        FireWeapon(entity, weapon, transform);
+                    } else if (altFireInput && m_projectileMesh && m_projectileMaterial) {
+                        FireProjectile(entity, transform);
                         weapon.timeSinceLastShot = 0.0f;
                         // weapon.currentAmmo--; // Optional: consume ammo for projectiles too?
                     }
@@ -45,22 +45,22 @@ void WeaponSystem::Update(ECS::ComponentManager& componentManager, Input& input,
     }
 }
 
-void WeaponSystem::FireProjectile(ECS::Entity entity, ECS::TransformComponent& transform, ECS::ComponentManager& componentManager, Mesh* mesh, std::shared_ptr<Material> material) {
+void WeaponSystem::FireProjectile(ECS::Entity entity, ECS::TransformComponent& transform) {
     // Create projectile entity
-    ECS::Entity projectile = componentManager.CreateEntity();
+    ECS::Entity projectile = m_componentManager.CreateEntity();
     
     // Calculate spawn position (same as ray origin)
     DirectX::XMFLOAT3 spawnPos = transform.position;
-    if (componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
-        auto& pc = componentManager.GetComponent<ECS::PlayerControllerComponent>(entity);
+    if (m_componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
+        auto& pc = m_componentManager.GetComponent<ECS::PlayerControllerComponent>(entity);
         spawnPos.y += pc.cameraHeight;
     }
 
     // Calculate direction
     float pitch = transform.rotation.x;
     float yaw = transform.rotation.y;
-    if (componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
-        pitch = componentManager.GetComponent<ECS::PlayerControllerComponent>(entity).viewPitch;
+    if (m_componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
+        pitch = m_componentManager.GetComponent<ECS::PlayerControllerComponent>(entity).viewPitch;
     }
 
     DirectX::XMFLOAT3 dir;
@@ -78,27 +78,27 @@ void WeaponSystem::FireProjectile(ECS::Entity entity, ECS::TransformComponent& t
     spawnPos.z += dir.z * 1.0f;
 
     // Add components
-    componentManager.AddComponent(projectile, ECS::TransformComponent{ spawnPos, {0,0,0}, {0.5f, 0.5f, 0.5f} });
-    componentManager.AddComponent(projectile, ECS::RenderComponent{ mesh, material });
+    m_componentManager.AddComponent(projectile, ECS::TransformComponent{ spawnPos, {0,0,0}, {0.5f, 0.5f, 0.5f} });
+    m_componentManager.AddComponent(projectile, ECS::RenderComponent{ m_projectileMesh, m_projectileMaterial });
     
     ECS::PhysicsComponent physics;
     physics.useGravity = false; // "not effected from gravity"
     physics.mass = 1.0f;
     physics.velocity = { dir.x * 20.0f, dir.y * 20.0f, dir.z * 20.0f }; // Speed 20
     physics.checkCollisions = false; // Handled by ProjectileSystem manually for now
-    componentManager.AddComponent(projectile, physics);
+    m_componentManager.AddComponent(projectile, physics);
 
     ECS::ProjectileComponent projComp;
     projComp.damage = 20.0f;
     projComp.lifetime = 5.0f;
     projComp.speed = 20.0f;
     projComp.velocity = physics.velocity; // Redundant but used by ProjectileSystem
-    componentManager.AddComponent(projectile, projComp);
+    m_componentManager.AddComponent(projectile, projComp);
 
     std::cout << "Fired Projectile!" << std::endl;
 }
 
-void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, ECS::TransformComponent& transform, ECS::ComponentManager& componentManager) {
+void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, ECS::TransformComponent& transform) {
     weapon.timeSinceLastShot = 0.0f;
     weapon.currentAmmo--;
 
@@ -111,8 +111,8 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
     DirectX::XMFLOAT3 rayOrigin = transform.position;
     
     // Adjust for camera height if available
-    if (componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
-        auto& pc = componentManager.GetComponent<ECS::PlayerControllerComponent>(entity);
+    if (m_componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
+        auto& pc = m_componentManager.GetComponent<ECS::PlayerControllerComponent>(entity);
         rayOrigin.y += pc.cameraHeight;
     }
 
@@ -122,8 +122,8 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
     float yaw = transform.rotation.y;
     
     // If player controller exists, use its view pitch
-    if (componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
-        pitch = componentManager.GetComponent<ECS::PlayerControllerComponent>(entity).viewPitch;
+    if (m_componentManager.HasComponent<ECS::PlayerControllerComponent>(entity)) {
+        pitch = m_componentManager.GetComponent<ECS::PlayerControllerComponent>(entity).viewPitch;
     }
 
     DirectX::XMFLOAT3 rayDir;
@@ -147,13 +147,13 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
         rayOrigin.x, rayOrigin.y, rayOrigin.z, rayDir.x, rayDir.y, rayDir.z) << std::endl;
 
     // Iterate over ColliderComponent array (Walls, Props, etc.)
-    auto colliderArray = componentManager.GetComponentArray<ECS::ColliderComponent>();
+    auto colliderArray = m_componentManager.GetComponentArray<ECS::ColliderComponent>();
     for (size_t i = 0; i < colliderArray->GetSize(); ++i) {
         ECS::Entity targetEntity = colliderArray->GetEntityAtIndex(i);
         if (targetEntity == entity) continue; // Don't hit self
 
-        if (!componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
-        auto& targetTransform = componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
+        if (!m_componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
+        auto& targetTransform = m_componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
         auto& collider = colliderArray->GetData(targetEntity);
         
         if (!collider.enabled) continue;
@@ -184,23 +184,23 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
     }
 
     // Iterate over HealthComponent array (Enemies without colliders)
-    auto healthArray = componentManager.GetComponentArray<ECS::HealthComponent>();
+    auto healthArray = m_componentManager.GetComponentArray<ECS::HealthComponent>();
     for (size_t i = 0; i < healthArray->GetSize(); ++i) {
         ECS::Entity targetEntity = healthArray->GetEntityAtIndex(i);
         if (targetEntity == entity) continue; // Don't hit self
         
         // Skip if already checked (has Collider)
-        if (componentManager.HasComponent<ECS::ColliderComponent>(targetEntity)) continue;
+        if (m_componentManager.HasComponent<ECS::ColliderComponent>(targetEntity)) continue;
 
-        if (!componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
-        auto& targetTransform = componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
+        if (!m_componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
+        auto& targetTransform = m_componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
 
         // Determine collision bounds (Render or Default)
         AABB localBounds;
         bool hasBounds = false;
 
-        if (componentManager.HasComponent<ECS::RenderComponent>(targetEntity)) {
-            auto& render = componentManager.GetComponent<ECS::RenderComponent>(targetEntity);
+        if (m_componentManager.HasComponent<ECS::RenderComponent>(targetEntity)) {
+            auto& render = m_componentManager.GetComponent<ECS::RenderComponent>(targetEntity);
             if (render.mesh) {
                 localBounds = render.mesh->GetLocalBounds();
                 hasBounds = true;
@@ -240,8 +240,8 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
         std::cout << hitMsg << std::endl;
         DebugUIRenderer::AddMessage(hitMsg, 2.0f);
         
-        if (componentManager.HasComponent<ECS::HealthComponent>(hitEntity)) {
-            auto& health = componentManager.GetComponent<ECS::HealthComponent>(hitEntity);
+        if (m_componentManager.HasComponent<ECS::HealthComponent>(hitEntity)) {
+            auto& health = m_componentManager.GetComponent<ECS::HealthComponent>(hitEntity);
             health.currentHealth -= weapon.damage;
             std::cout << std::format("Entity {} Health: {}", hitEntity, health.currentHealth) << std::endl;
         } else {

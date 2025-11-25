@@ -6,13 +6,13 @@ using namespace PhysicsConstants;
 
 namespace ECS {
 
-void PhysicsSystem::Update(ComponentManager& cm, float deltaTime) {
+void PhysicsSystem::Update(float deltaTime) {
     // Clamp deltaTime for safety
     if (deltaTime < MIN_DELTA_TIME) deltaTime = MIN_DELTA_TIME;
     if (deltaTime > MAX_DELTA_TIME) deltaTime = MAX_DELTA_TIME;
     
     // Iterate over all physics components
-    auto physicsArray = cm.GetComponentArray<PhysicsComponent>();
+    auto physicsArray = m_componentManager.GetComponentArray<PhysicsComponent>();
     auto& physicsVec = physicsArray->GetComponentArray();
     
     for (size_t i = 0; i < physicsVec.size(); ++i) {
@@ -20,8 +20,8 @@ void PhysicsSystem::Update(ComponentManager& cm, float deltaTime) {
         PhysicsComponent& physics = physicsVec[i];
         
         // We need a transform to do anything
-        if (!cm.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = cm.GetComponent<TransformComponent>(entity);
+        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
+        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Apply physics forces
         if (physics.useGravity) {
@@ -36,7 +36,7 @@ void PhysicsSystem::Update(ComponentManager& cm, float deltaTime) {
         
         // Simple ground collision
         if (physics.checkCollisions) {
-            CheckGroundCollision(entity, transform, physics, cm);
+            CheckGroundCollision(entity, transform, physics);
         }
     }
 }
@@ -65,11 +65,11 @@ void PhysicsSystem::IntegrateVelocity(TransformComponent& transform, PhysicsComp
     transform.position.z += physics.velocity.z * dt;
 }
 
-void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics, ComponentManager& cm) {
+void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics) {
     // Full collision detection with other entities
-    if (!cm.HasComponent<ColliderComponent>(entity)) return;
+    if (!m_componentManager.HasComponent<ColliderComponent>(entity)) return;
     
-    ColliderComponent& myCollider = cm.GetComponent<ColliderComponent>(entity);
+    ColliderComponent& myCollider = m_componentManager.GetComponent<ColliderComponent>(entity);
     if (!myCollider.enabled) return;
     
     // Reset grounded state (will be set to true if we hit something below us)
@@ -94,7 +94,7 @@ void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& tran
     myMax.z = transform.position.z + myExtents.z;
     
     // Check against all other entities with colliders
-    auto colliderArray = cm.GetComponentArray<ColliderComponent>();
+    auto colliderArray = m_componentManager.GetComponentArray<ColliderComponent>();
     auto& colliderVec = colliderArray->GetComponentArray();
     
     for (size_t i = 0; i < colliderVec.size(); ++i) {
@@ -104,8 +104,8 @@ void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& tran
         ColliderComponent& otherCollider = colliderVec[i];
         if (!otherCollider.enabled) continue;
         
-        if (!cm.HasComponent<TransformComponent>(other)) continue;
-        TransformComponent& otherTransform = cm.GetComponent<TransformComponent>(other);
+        if (!m_componentManager.HasComponent<TransformComponent>(other)) continue;
+        TransformComponent& otherTransform = m_componentManager.GetComponent<TransformComponent>(other);
         
         // Calculate other's world-space AABB
         DirectX::XMFLOAT3 otherExtents = {

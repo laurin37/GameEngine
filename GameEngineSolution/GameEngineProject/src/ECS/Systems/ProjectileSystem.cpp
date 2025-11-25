@@ -3,8 +3,8 @@
 #include <iostream>
 #include <format>
 
-void ProjectileSystem::Update(ECS::ComponentManager& componentManager, float deltaTime) {
-    auto projectileArray = componentManager.GetComponentArray<ECS::ProjectileComponent>();
+void ProjectileSystem::Update(float deltaTime) {
+    auto projectileArray = m_componentManager.GetComponentArray<ECS::ProjectileComponent>();
     
     // Iterate backwards to safely remove entities
     for (int i = (int)projectileArray->GetSize() - 1; i >= 0; --i) {
@@ -14,13 +14,13 @@ void ProjectileSystem::Update(ECS::ComponentManager& componentManager, float del
         // Update lifetime
         projectile.lifetime -= deltaTime;
         if (projectile.lifetime <= 0.0f) {
-            componentManager.DestroyEntity(entity);
+            m_componentManager.DestroyEntity(entity);
             continue;
         }
 
         // Update position based on velocity
-        if (componentManager.HasComponent<ECS::TransformComponent>(entity)) {
-            ECS::TransformComponent& transform = componentManager.GetComponent<ECS::TransformComponent>(entity);
+        if (m_componentManager.HasComponent<ECS::TransformComponent>(entity)) {
+            ECS::TransformComponent& transform = m_componentManager.GetComponent<ECS::TransformComponent>(entity);
             
             transform.position.x += projectile.velocity.x * projectile.speed * deltaTime;
             transform.position.y += projectile.velocity.y * projectile.speed * deltaTime;
@@ -36,20 +36,20 @@ void ProjectileSystem::Update(ECS::ComponentManager& componentManager, float del
         ECS::Entity hitEntity = ECS::NULL_ENTITY;
 
         // 1. Check Colliders (Walls, etc.)
-        auto colliderArray = componentManager.GetComponentArray<ECS::ColliderComponent>();
+        auto colliderArray = m_componentManager.GetComponentArray<ECS::ColliderComponent>();
         for (size_t j = 0; j < colliderArray->GetSize(); ++j) {
             ECS::Entity targetEntity = colliderArray->GetEntityAtIndex(j);
             if (targetEntity == entity) continue; // Don't hit self
 
-            if (!componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
-            auto& targetTransform = componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
+            if (!m_componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
+            auto& targetTransform = m_componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
             auto& collider = colliderArray->GetData(targetEntity);
             
             if (!collider.enabled) continue;
 
             // Check point vs AABB
-            if (componentManager.HasComponent<ECS::TransformComponent>(entity)) {
-                auto& projTransform = componentManager.GetComponent<ECS::TransformComponent>(entity);
+            if (m_componentManager.HasComponent<ECS::TransformComponent>(entity)) {
+                auto& projTransform = m_componentManager.GetComponent<ECS::TransformComponent>(entity);
                 
                 float minX = targetTransform.position.x + (collider.localAABB.center.x - collider.localAABB.extents.x) * targetTransform.scale.x;
                 float maxX = targetTransform.position.x + (collider.localAABB.center.x + collider.localAABB.extents.x) * targetTransform.scale.x;
@@ -70,23 +70,23 @@ void ProjectileSystem::Update(ECS::ComponentManager& componentManager, float del
 
         // 2. Check Health Entities (if not already hit)
         if (!hit) {
-            auto healthArray = componentManager.GetComponentArray<ECS::HealthComponent>();
+            auto healthArray = m_componentManager.GetComponentArray<ECS::HealthComponent>();
             for (size_t j = 0; j < healthArray->GetSize(); ++j) {
                 ECS::Entity targetEntity = healthArray->GetEntityAtIndex(j);
                 if (targetEntity == entity) continue; // Don't hit self
                 
                 // Skip if already checked (has Collider)
-                if (componentManager.HasComponent<ECS::ColliderComponent>(targetEntity)) continue;
+                if (m_componentManager.HasComponent<ECS::ColliderComponent>(targetEntity)) continue;
 
-                if (!componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
-                auto& targetTransform = componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
+                if (!m_componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
+                auto& targetTransform = m_componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
                 
                 // Determine collision bounds
                 AABB localBounds;
                 bool hasBounds = false;
 
-                if (componentManager.HasComponent<ECS::RenderComponent>(targetEntity)) {
-                    auto& render = componentManager.GetComponent<ECS::RenderComponent>(targetEntity);
+                if (m_componentManager.HasComponent<ECS::RenderComponent>(targetEntity)) {
+                    auto& render = m_componentManager.GetComponent<ECS::RenderComponent>(targetEntity);
                     if (render.mesh) {
                         localBounds = render.mesh->GetLocalBounds();
                         hasBounds = true;
@@ -98,8 +98,8 @@ void ProjectileSystem::Update(ECS::ComponentManager& componentManager, float del
                     localBounds.extents = { 0.5f, 0.5f, 0.5f }; // Default 1.0 size
                 }
 
-                if (componentManager.HasComponent<ECS::TransformComponent>(entity)) {
-                    auto& projTransform = componentManager.GetComponent<ECS::TransformComponent>(entity);
+                if (m_componentManager.HasComponent<ECS::TransformComponent>(entity)) {
+                    auto& projTransform = m_componentManager.GetComponent<ECS::TransformComponent>(entity);
                     
                     float minX = targetTransform.position.x + (localBounds.center.x - localBounds.extents.x) * targetTransform.scale.x;
                     float maxX = targetTransform.position.x + (localBounds.center.x + localBounds.extents.x) * targetTransform.scale.x;
@@ -123,12 +123,12 @@ void ProjectileSystem::Update(ECS::ComponentManager& componentManager, float del
             std::string hitMsg = std::format("Projectile hit Entity {}!", hitEntity);
             std::cout << hitMsg << std::endl;
             
-            if (componentManager.HasComponent<ECS::HealthComponent>(hitEntity)) {
-                auto& health = componentManager.GetComponent<ECS::HealthComponent>(hitEntity);
+            if (m_componentManager.HasComponent<ECS::HealthComponent>(hitEntity)) {
+                auto& health = m_componentManager.GetComponent<ECS::HealthComponent>(hitEntity);
                 health.currentHealth -= projectile.damage;
             }
             
-            componentManager.DestroyEntity(entity); // Destroy projectile
+            m_componentManager.DestroyEntity(entity); // Destroy projectile
             continue; // Move to next projectile
         }
     }

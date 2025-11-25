@@ -1,12 +1,14 @@
 #pragma once
 
 #include "../ComponentManager.h"
+#include "../System.h"
 
 namespace ECS {
 
-class MovementSystem {
+class MovementSystem : public System {
 public:
-    void Update(ComponentManager& cm, float deltaTime);
+    explicit MovementSystem(ComponentManager& cm) : System(cm) {}
+    void Update(float deltaTime) override;
 };
 
 } // namespace ECS

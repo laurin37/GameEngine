@@ -1,8 +1,10 @@
 #pragma once
 
 #include "../ComponentManager.h"
+#include "../System.h"
 
-class ProjectileSystem {
+class ProjectileSystem : public ECS::System {
 public:
-    void Update(ECS::ComponentManager& componentManager, float deltaTime);
+    explicit ProjectileSystem(ECS::ComponentManager& cm) : ECS::System(cm) {}
+    void Update(float deltaTime) override;
 };

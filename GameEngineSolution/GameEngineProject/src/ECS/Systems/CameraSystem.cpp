@@ -6,20 +6,20 @@ using namespace DirectX;
 
 namespace ECS {
 
-void CameraSystem::Update(ComponentManager& cm) {
+void CameraSystem::Update(float deltaTime) {
     // Iterate over all camera components
-    auto cameraArray = cm.GetComponentArray<CameraComponent>();
+    auto cameraArray = m_componentManager.GetComponentArray<CameraComponent>();
     auto& cameraVec = cameraArray->GetComponentArray();
     
     for (size_t i = 0; i < cameraVec.size(); ++i) {
         Entity entity = cameraArray->GetEntityAtIndex(i);
         CameraComponent& camera = cameraVec[i];
         
-        if (!cm.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = cm.GetComponent<TransformComponent>(entity);
+        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
+        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Optional player controller for pitch
-        PlayerControllerComponent* controller = cm.GetComponentPtr<PlayerControllerComponent>(entity);
+        PlayerControllerComponent* controller = m_componentManager.GetComponentPtr<PlayerControllerComponent>(entity);
         
         // Update projection matrix
         float fovRadians = XMConvertToRadians(camera.fov);
@@ -52,16 +52,16 @@ void CameraSystem::Update(ComponentManager& cm) {
     }
 }
 
-bool CameraSystem::GetActiveCamera(ComponentManager& cm, XMMATRIX& viewOut, XMMATRIX& projOut) {
-    Entity activeCameraEntity = GetActiveCameraEntity(cm);
+bool CameraSystem::GetActiveCamera(DirectX::XMMATRIX& viewOut, DirectX::XMMATRIX& projOut) {
+    Entity activeCameraEntity = GetActiveCameraEntity();
     
     // Check if we have a valid entity (NULL_ENTITY = 0)
     if (activeCameraEntity == NULL_ENTITY) {
         return false; // No active camera
     }
     
-    if (!cm.HasComponent<CameraComponent>(activeCameraEntity)) return false;
-    CameraComponent& camera = cm.GetComponent<CameraComponent>(activeCameraEntity);
+    if (!m_componentManager.HasComponent<CameraComponent>(activeCameraEntity)) return false;
+    CameraComponent& camera = m_componentManager.GetComponent<CameraComponent>(activeCameraEntity);
     
     // Load matrices
     viewOut = XMLoadFloat4x4(&camera.viewMatrix);
@@ -70,8 +70,8 @@ bool CameraSystem::GetActiveCamera(ComponentManager& cm, XMMATRIX& viewOut, XMMA
     return true;
 }
 
-Entity CameraSystem::GetActiveCameraEntity(ComponentManager& cm) {
-    auto cameraArray = cm.GetComponentArray<CameraComponent>();
+Entity CameraSystem::GetActiveCameraEntity() {
+    auto cameraArray = m_componentManager.GetComponentArray<CameraComponent>();
     // Iterate to find active camera
     // Note: This is O(N) where N is number of cameras (usually small)
     for (size_t i = 0; i < cameraArray->GetSize(); ++i) {

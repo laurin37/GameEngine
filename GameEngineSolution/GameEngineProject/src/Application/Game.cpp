@@ -33,7 +33,7 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         m_renderer->Initialize(&m_graphics, m_assetManager.get(), WINDOW_WIDTH, WINDOW_HEIGHT);
         m_uiRenderer = std::make_unique<UIRenderer>(&m_graphics);
 
-        m_scene = std::make_unique<Scene>(m_assetManager.get(), &m_graphics);
+        m_scene = std::make_unique<Scene>(m_assetManager.get(), &m_graphics, &m_input);
         m_scene->Load();
     }
     catch (const std::exception& e)
@@ -114,7 +114,7 @@ void Game::Update(float deltaTime)
 
     if (m_scene)
     {
-        m_scene->Update(deltaTime, m_input);
+        m_scene->Update(deltaTime);
     }
 }
 

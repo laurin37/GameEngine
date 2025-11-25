@@ -7,11 +7,11 @@ using namespace DirectX;
 
 namespace ECS {
 
-void RenderSystem::Render(ComponentManager& cm, Renderer* renderer, Camera& camera) {
+void RenderSystem::Render(Renderer* renderer, Camera& camera) {
     if (!renderer) return;
     
     // Iterate over all render components
-    auto renderArray = cm.GetComponentArray<RenderComponent>();
+    auto renderArray = m_componentManager.GetComponentArray<RenderComponent>();
     auto& renderVec = renderArray->GetComponentArray();
     
     for (size_t i = 0; i < renderVec.size(); ++i) {
@@ -20,8 +20,8 @@ void RenderSystem::Render(ComponentManager& cm, Renderer* renderer, Camera& came
         
         if (!render.mesh || !render.material) continue;
         
-        if (!cm.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = cm.GetComponent<TransformComponent>(entity);
+        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
+        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Build world matrix from transform
         XMMATRIX scaleMatrix = XMMatrixScaling(transform.scale.x, transform.scale.y, transform.scale.z);
@@ -42,13 +42,13 @@ void RenderSystem::Render(ComponentManager& cm, Renderer* renderer, Camera& came
     }
 }
 
-void RenderSystem::RenderDebug(ComponentManager& cm, Renderer* renderer, Camera& camera) {
+void RenderSystem::RenderDebug(Renderer* renderer, Camera& camera) {
     if (!renderer) return;
     
     // Get all entities with Collider and Transform
     std::vector<AABB> aabbs;
     
-    auto colliderArray = cm.GetComponentArray<ColliderComponent>();
+    auto colliderArray = m_componentManager.GetComponentArray<ColliderComponent>();
     auto& colliderVec = colliderArray->GetComponentArray();
     
     for (size_t i = 0; i < colliderVec.size(); ++i) {
@@ -57,8 +57,8 @@ void RenderSystem::RenderDebug(ComponentManager& cm, Renderer* renderer, Camera&
         
         if (!collider.enabled) continue;
         
-        if (!cm.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = cm.GetComponent<TransformComponent>(entity);
+        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
+        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Calculate world-space AABB
         AABB worldAABB;
