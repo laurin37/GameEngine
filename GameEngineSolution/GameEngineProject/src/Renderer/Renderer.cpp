@@ -352,6 +352,8 @@ void Renderer::RenderMainPass(
         else {
             ps_frame_cb.pointLights[i] = {};
             ps_frame_cb.pointLights[i].color.w = 0;
+            // Prevent division by zero in shader (attenuation = 1 / (c + l*d + q*d*d))
+            ps_frame_cb.pointLights[i].attenuation = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
         }
     }
     DirectX::XMStoreFloat4(&ps_frame_cb.cameraPos, camera.GetPosition());

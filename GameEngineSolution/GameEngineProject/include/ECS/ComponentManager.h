@@ -149,7 +149,7 @@ public:
         }
     }
 
-    size_t GetEntityCount() const { return m_idGenerator.GetTotalCreated(); } // Approximation
+    size_t GetEntityCount() const { return m_idGenerator.GetActiveCount(); }
 
     // ========================================
     // Generic Component Management

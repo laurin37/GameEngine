@@ -38,6 +38,11 @@ public:
     uint32_t GetTotalCreated() const {
         return m_nextID - 1;
     }
+
+    // Get number of currently active entities
+    uint32_t GetActiveCount() const {
+        return (m_nextID - 1) - static_cast<uint32_t>(m_freeList.size());
+    }
     
 private:
     Entity m_nextID;                    // Next ID to assign

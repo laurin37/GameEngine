@@ -141,6 +141,9 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
         PointLight pl;
         pl.position = DirectX::XMFLOAT4(transform.position.x, transform.position.y, transform.position.z, light.range);
         pl.color = light.color;
+        // Default attenuation (Constant, Linear, Quadratic)
+        // Adjust these values to change falloff characteristics
+        pl.attenuation = DirectX::XMFLOAT4(1.0f, 0.09f, 0.032f, 0.0f); 
         ecsLights.push_back(pl);
     }
     
