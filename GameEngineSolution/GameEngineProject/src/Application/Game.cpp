@@ -6,8 +6,6 @@
 #include "../../include/ResourceManagement/TextureLoader.h"
 #include "../../include/Renderer/Graphics.h" 
 #include "../../include/Physics/Collision.h"
-#include "../../include/EntityComponentSystem/Player.h"
-#include "../../include/Physics/PhysicsSystem.h"
 #include "../../include/Renderer/PostProcess.h"
 #include "../../include/Renderer/Renderer.h"
 

@@ -2,7 +2,6 @@
 #include "../../include/Utils/EnginePCH.h"
 #include "../../include/Utils/Transform.h"
 #include "../../include/Physics/Collider.h"
-#include "../../include/Physics/PhysicsBody.h"
 
 using namespace DirectX;
 
@@ -75,12 +74,5 @@ void GameObject::GenerateCollider(ColliderType type)
         
         // Store in legacy bounding box for now
         m_boundingBox = tempCollider.GetLocalAABB();
-    }
-}
-
-void GameObject::SetKinematic(bool kinematic)
-{
-    if (m_physics) {
-        m_physics->isKinematic = kinematic;
     }
 }

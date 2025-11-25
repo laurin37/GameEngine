@@ -4,7 +4,6 @@
 #include "../../include/ResourceManagement/AssetManager.h"
 #include "../../include/EntityComponentSystem/Camera.h"
 #include "../../include/EntityComponentSystem/GameObject.h"
-#include "../../include/EntityComponentSystem/Gun.h"
 #include "../../include/ResourceManagement/Shader.h"
 #include "../../include/Renderer/Skybox.h"
 #include "../../include/Renderer/PostProcess.h"
@@ -347,9 +346,6 @@ void Renderer::RenderDebug(
     for (const auto& pGameObject : gameObjects)
     {
         if (!pGameObject) continue;
-        
-        // Skip gun in debug visualization
-        if (dynamic_cast<const Gun*>(pGameObject.get())) continue;
 
         AABB worldAABB = pGameObject->GetWorldBoundingBox();
 
