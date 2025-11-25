@@ -143,6 +143,20 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
             instance.position = transform->position;
             instance.rotation = transform->rotation;
             instance.scale = transform->scale;
+
+            if (auto* collider = m_ecsComponentManager.GetCollider(entity); collider && collider->enabled) {
+                instance.hasBounds = true;
+                instance.worldAABB.extents.x = collider->localAABB.extents.x * transform->scale.x;
+                instance.worldAABB.extents.y = collider->localAABB.extents.y * transform->scale.y;
+                instance.worldAABB.extents.z = collider->localAABB.extents.z * transform->scale.z;
+
+                instance.worldAABB.center.x = transform->position.x + (transform->scale.x * collider->localAABB.center.x);
+                instance.worldAABB.center.y = transform->position.y + (transform->scale.y * collider->localAABB.center.y);
+                instance.worldAABB.center.z = transform->position.z + (transform->scale.z * collider->localAABB.center.z);
+            } else {
+                instance.hasBounds = false;
+            }
+
             renderInstances.push_back(instance);
         }
     }

@@ -10,6 +10,8 @@
 #include "../../include/Renderer/Mesh.h"
 #include "../../include/Physics/Collision.h"
 #include "../../include/Renderer/RenderingConstants.h"
+#include <DirectXCollision.h>
+#include <algorithm>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -58,6 +60,44 @@ void Renderer::RenderFrame(
     const DirectionalLight& dirLight,
     const std::vector<PointLight>& pointLights)
 {
+    using namespace DirectX;
+    std::vector<const RenderInstance*> visibleInstances;
+    visibleInstances.reserve(instances.size());
+
+    BoundingFrustum frustum;
+    BoundingFrustum::CreateFromMatrix(frustum, m_projectionMatrix);
+    BoundingFrustum frustumWorld = frustum;
+    XMMATRIX viewMatrix = camera.GetViewMatrix();
+    XMMATRIX invView = XMMatrixInverse(nullptr, viewMatrix);
+    frustumWorld.Transform(frustumWorld, invView);
+
+    for (const auto& instance : instances)
+    {
+        if (!instance.hasBounds)
+        {
+            visibleInstances.push_back(&instance);
+            continue;
+        }
+
+        BoundingBox box;
+        box.Center = instance.worldAABB.center;
+        box.Extents = instance.worldAABB.extents;
+
+        if (frustumWorld.Intersects(box))
+        {
+            visibleInstances.push_back(&instance);
+        }
+    }
+
+    std::sort(visibleInstances.begin(), visibleInstances.end(),
+        [](const RenderInstance* lhs, const RenderInstance* rhs)
+        {
+            if (lhs->material != rhs->material)
+            {
+                return lhs->material < rhs->material;
+            }
+            return lhs->mesh < rhs->mesh;
+        });
     ID3D11DeviceContext* context = m_graphics->GetContext().Get();
     ID3D11DepthStencilView* dsv = m_graphics->GetDepthStencilView().Get();
     ID3D11RenderTargetView* rtv = m_graphics->GetRenderTargetView().Get();
@@ -70,7 +110,7 @@ void Renderer::RenderFrame(
     // 1. Render shadows first, as it uses its own render targets
     DirectX::XMMATRIX lightView = DirectX::XMMatrixIdentity();
     DirectX::XMMATRIX lightProj = DirectX::XMMatrixIdentity();
-    RenderShadowPass(instances, lightView, lightProj);
+    RenderShadowPass(visibleInstances, lightView, lightProj);
 
     // 2. Unbind shader resources again before setting main render targets
     context->PSSetShaderResources(0, 3, nullSRVs);
@@ -79,7 +119,7 @@ void Renderer::RenderFrame(
     m_postProcess->Bind(context, dsv);  // This sets the post-process offscreen texture as render target
     
     // 4. Render scene to offscreen texture
-    RenderMainPass(camera, instances, lightView * lightProj, dirLight, pointLights);
+    RenderMainPass(camera, visibleInstances, lightView * lightProj, dirLight, pointLights);
 
     // 5. Unbind shader resources before post-processing
     context->PSSetShaderResources(0, 3, nullSRVs);
@@ -235,7 +275,7 @@ void Renderer::InitPipeline(int width, int height)
     ThrowIfFailed(device->CreateDepthStencilState(&dssDesc, &m_depthDisabledDSS));
 }
 
-void Renderer::RenderShadowPass(const std::vector<RenderInstance>& instances, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj)
+void Renderer::RenderShadowPass(const std::vector<const RenderInstance*>& instances, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj)
 {
     ID3D11DeviceContext* context = m_graphics->GetContext().Get();
 
@@ -260,22 +300,23 @@ void Renderer::RenderShadowPass(const std::vector<RenderInstance>& instances, Di
     context->PSSetShader(nullptr, nullptr, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    for (const auto& instance : instances)
+    for (const auto* instance : instances)
     {
-        DirectX::XMMATRIX worldMatrix = BuildWorldMatrix(instance);
+        if (!instance || !instance->mesh) continue;
+        DirectX::XMMATRIX worldMatrix = BuildWorldMatrix(*instance);
         DirectX::XMMATRIX wvp = worldMatrix * outLightView * outLightProj;
 
         DirectX::XMMATRIX wvpT = DirectX::XMMatrixTranspose(wvp);
         context->UpdateSubresource(m_cbShadowMatrix.Get(), 0, nullptr, &wvpT, 0, 0);
         context->VSSetConstantBuffers(0, 1, m_cbShadowMatrix.GetAddressOf());
 
-        DrawInstance(context, instance, m_psMaterialConstantBuffer.Get());
+        DrawInstance(context, *instance, m_psMaterialConstantBuffer.Get());
     }
 }
 
 void Renderer::RenderMainPass(
     const Camera& camera,
-    const std::vector<RenderInstance>& instances,
+    const std::vector<const RenderInstance*>& instances,
     const DirectX::XMMATRIX& lightViewProj,
     const DirectionalLight& dirLight,
     const std::vector<PointLight>& pointLights
@@ -321,9 +362,10 @@ void Renderer::RenderMainPass(
     m_mainPS->Bind(context);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    for (const auto& instance : instances)
+    for (const auto* instance : instances)
     {
-        DirectX::XMMATRIX worldMatrix = BuildWorldMatrix(instance);
+        if (!instance || !instance->mesh) continue;
+        DirectX::XMMATRIX worldMatrix = BuildWorldMatrix(*instance);
 
         CB_VS_vertexshader vs_cb;
         DirectX::XMStoreFloat4x4(&vs_cb.worldMatrix, DirectX::XMMatrixTranspose(worldMatrix));
@@ -334,7 +376,7 @@ void Renderer::RenderMainPass(
 
         context->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());
 
-        DrawInstance(context, instance, m_psMaterialConstantBuffer.Get());
+        DrawInstance(context, *instance, m_psMaterialConstantBuffer.Get());
     }
 
     if (m_skybox)

@@ -6,6 +6,7 @@
 #include <wrl/client.h>
 
 #include "../Utils/EnginePCH.h"
+#include "../Physics/Collision.h"
 
 // Forward Declarations
 class Graphics;
@@ -27,7 +28,6 @@ struct ID3D11Texture2D;
 struct ID3D11DepthStencilView;
 struct ID3D11DepthStencilState;
 struct ID3D11RasterizerState;
-struct AABB;
 class AssetManager; // Forward Declaration
 
 class Renderer
@@ -40,6 +40,8 @@ public:
         DirectX::XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT3 scale = { 1.0f, 1.0f, 1.0f };
+        AABB worldAABB{};
+        bool hasBounds = false;
     };
 
     Renderer();
@@ -62,10 +64,10 @@ public:
 
 private:
     void InitPipeline(int width, int height);
-    void RenderShadowPass(const std::vector<RenderInstance>& instances, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj);
+    void RenderShadowPass(const std::vector<const RenderInstance*>& instances, DirectX::XMMATRIX& outLightView, DirectX::XMMATRIX& outLightProj);
     void RenderMainPass(
         const Camera& camera,
-        const std::vector<RenderInstance>& instances,
+        const std::vector<const RenderInstance*>& instances,
         const DirectX::XMMATRIX& lightViewProj,
         const DirectionalLight& dirLight,
         const std::vector<PointLight>& pointLights
