@@ -83,7 +83,7 @@ void PlayerMovementSystem::HandleMouseLook(Entity entity, TransformComponent& tr
     
     // Apply rotation (yaw = Y rotation, pitch = X rotation)
     transform.rotation.y += mouseDeltaX * controller.mouseSensitivity;  // Yaw
-    transform.rotation.x -= mouseDeltaY * controller.mouseSensitivity;  // Pitch (inverted)
+    transform.rotation.x += mouseDeltaY * controller.mouseSensitivity;  // Pitch
     
     // Clamp pitch to prevent flipping
     const float maxPitch = DirectX::XM_PI / 2.0f - 0.1f;

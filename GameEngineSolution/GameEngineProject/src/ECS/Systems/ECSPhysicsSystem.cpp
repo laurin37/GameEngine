@@ -63,33 +63,106 @@ void PhysicsSystem::IntegrateVelocity(TransformComponent& transform, PhysicsComp
 }
 
 void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics, ComponentManager& cm) {
-    // Simple ground collision
-    // Floor is at Y = -1.0 with scale Y = 0.1 (half-extent 0.05) -> Top surface at -0.95
-    const float GROUND_Y = -0.95f; 
+    // Full collision detection with other entities
+    if (!cm.HasCollider(entity)) return;
     
-    float entityHalfHeight = 0.5f; // Default fallback
+    ColliderComponent* myCollider = cm.GetCollider(entity);
+    if (!myCollider || !myCollider->enabled) return;
     
-    // Try to get collider for accurate bounds
-    if (cm.HasCollider(entity)) {
-        ColliderComponent* collider = cm.GetCollider(entity);
-        if (collider) {
-            entityHalfHeight = collider->localAABB.extents.y * transform.scale.y;
+    // Reset grounded state (will be set to true if we hit something below us)
+    physics.isGrounded = false;
+    
+    // Calculate my world-space AABB
+    DirectX::XMFLOAT3 myMin, myMax;
+    DirectX::XMFLOAT3 myExtents = {
+        myCollider->localAABB.extents.x * transform.scale.x,
+        myCollider->localAABB.extents.y * transform.scale.y,
+        myCollider->localAABB.extents.z * transform.scale.z
+    };
+    
+    float colliderCenterOffsetY = myCollider->localAABB.center.y * transform.scale.y;
+    float colliderCenterY = transform.position.y + colliderCenterOffsetY;
+    
+    myMin.x = transform.position.x - myExtents.x;
+    myMin.y = colliderCenterY - myExtents.y;
+    myMin.z = transform.position.z - myExtents.z;
+    myMax.x = transform.position.x + myExtents.x;
+    myMax.y = colliderCenterY + myExtents.y;
+    myMax.z = transform.position.z + myExtents.z;
+    
+    // Check against all other entities with colliders
+    std::vector<Entity> allEntities = cm.GetEntitiesWithCollider();
+    
+    for (Entity other : allEntities) {
+        if (other == entity) continue; // Skip self
+        
+        ColliderComponent* otherCollider = cm.GetCollider(other);
+        TransformComponent* otherTransform = cm.GetTransform(other);
+        
+        if (!otherCollider || !otherCollider->enabled || !otherTransform) continue;
+        
+        // Calculate other's world-space AABB
+        DirectX::XMFLOAT3 otherExtents = {
+            otherCollider->localAABB.extents.x * otherTransform->scale.x,
+            otherCollider->localAABB.extents.y * otherTransform->scale.y,
+            otherCollider->localAABB.extents.z * otherTransform->scale.z
+        };
+        
+        float otherCenterOffsetY = otherCollider->localAABB.center.y * otherTransform->scale.y;
+        float otherColliderCenterY = otherTransform->position.y + otherCenterOffsetY;
+        
+        DirectX::XMFLOAT3 otherMin, otherMax;
+        otherMin.x = otherTransform->position.x - otherExtents.x;
+        otherMin.y = otherColliderCenterY - otherExtents.y;
+        otherMin.z = otherTransform->position.z - otherExtents.z;
+        otherMax.x = otherTransform->position.x + otherExtents.x;
+        otherMax.y = otherColliderCenterY + otherExtents.y;
+        otherMax.z = otherTransform->position.z + otherExtents.z;
+        
+        // AABB intersection test
+        bool intersects = 
+            myMin.x <= otherMax.x && myMax.x >= otherMin.x &&
+            myMin.y <= otherMax.y && myMax.y >= otherMin.y &&
+            myMin.z <= otherMax.z && myMax.z >= otherMin.z;
+        
+        if (intersects) {
+            // Calculate penetration depth on each axis
+            float penetrationX = (std::min)(myMax.x - otherMin.x, otherMax.x - myMin.x);
+            float penetrationY = (std::min)(myMax.y - otherMin.y, otherMax.y - myMin.y);
+            float penetrationZ = (std::min)(myMax.z - otherMin.z, otherMax.z - myMin.z);
+            
+            // Resolve on axis with smallest penetration
+            if (penetrationX < penetrationY && penetrationX < penetrationZ) {
+                // Resolve on X axis
+                if (transform.position.x < otherTransform->position.x) {
+                    transform.position.x -= penetrationX;
+                } else {
+                    transform.position.x += penetrationX;
+                }
+                physics.velocity.x = 0.0f;
+            } else if (penetrationY < penetrationZ) {
+                // Resolve on Y axis
+                if (colliderCenterY < otherColliderCenterY) {
+                    // We're below the other object - push us down (hitting ceiling)
+                    transform.position.y -= penetrationY;
+                    physics.velocity.y = 0.0f;
+                } else {
+                    // We're above the other object - push us up (standing on floor)
+                    transform.position.y += penetrationY;
+                    physics.velocity.y = 0.0f;
+                    physics.isGrounded = true; // We're standing on something!
+                }
+            } else {
+                // Resolve on Z axis
+                if (transform.position.z < otherTransform->position.z) {
+                    transform.position.z -= penetrationZ;
+                } else {
+                    transform.position.z += penetrationZ;
+                }
+                physics.velocity.z = 0.0f;
+            }
         }
     }
-    
-    float bottomY = transform.position.y - entityHalfHeight;
-    
-    if (bottomY <= GROUND_Y) {
-        // Collision with ground
-        transform.position.y = GROUND_Y + entityHalfHeight;
-        physics.velocity.y = 0.0f;
-        physics.isGrounded = true;
-    } else {
-        physics.isGrounded = false;
-    }
-    
-    // TODO: Full collision detection with other entities using ColliderComponent
-    // This would iterate through all entities with colliders and check AABB intersections
 }
 
 } // namespace ECS
