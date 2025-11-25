@@ -18,201 +18,291 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Window.cpp">
+    <ClCompile Include="src\Application\Game.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Graphics.cpp">
+    <ClCompile Include="src\Application\Scene.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Camera.cpp">
+    <ClCompile Include="src\EntityComponentSystem\Bullet.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Mesh.cpp">
+    <ClCompile Include="src\EntityComponentSystem\Camera.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\GameObject.cpp">
+    <ClCompile Include="src\EntityComponentSystem\GameObject.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Input.cpp">
+    <ClCompile Include="src\EntityComponentSystem\Gun.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Game.cpp">
+    <ClCompile Include="src\EntityComponentSystem\HealthObject.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Material.cpp">
+    <ClCompile Include="src\EntityComponentSystem\Player.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\ModelLoader.cpp">
+    <ClCompile Include="src\Input\Input.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\TextureLoader.cpp">
+    <ClCompile Include="src\Physics\Collider.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\SimpleFont.cpp">
+    <ClCompile Include="src\Physics\PhysicsBody.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Shader.cpp">
+    <ClCompile Include="src\Physics\PhysicsSystem.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Skybox.cpp">
+    <ClCompile Include="src\Platform\Window.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\PostProcess.cpp">
+    <ClCompile Include="src\Renderer\BloomEffect.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Renderer.cpp">
+    <ClCompile Include="src\Renderer\Graphics.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\AssetManager.cpp">
+    <ClCompile Include="src\Renderer\Material.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\UIRenderer.cpp">
+    <ClCompile Include="src\Renderer\Mesh.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\PhysicsSystem.cpp">
+    <ClCompile Include="src\Renderer\PostProcess.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Player.cpp">
+    <ClCompile Include="src\Renderer\Renderer.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Bullet.cpp">
+    <ClCompile Include="src\Renderer\Skybox.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Gun.cpp">
+    <ClCompile Include="src\ResourceManagement\AssetManager.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\HealthObject.cpp">
+    <ClCompile Include="src\ResourceManagement\FontLoader.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Transform.cpp">
+    <ClCompile Include="src\ResourceManagement\ModelLoader.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Crosshair.cpp">
+    <ClCompile Include="src\ResourceManagement\Shader.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Scene.cpp">
+    <ClCompile Include="src\ResourceManagement\TextureLoader.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\PhysicsBody.cpp">
+    <ClCompile Include="src\UI\Crosshair.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Collider.cpp">
+    <ClCompile Include="src\UI\SimpleFont.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\Logger.cpp">
+    <ClCompile Include="src\UI\UIRenderer.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\FontLoader.cpp">
+    <ClCompile Include="src\Utils\Logger.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="src\BloomEffect.cpp">
+    <ClCompile Include="src\Utils\Transform.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\DebugUIRenderer.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ResourceManagement\SceneLoader.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ResourceManagement\JsonParser.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\Camera.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\WeaponSystem.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\ProjectileSystem.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\PlayerMovementSystem.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\HealthSystem.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\ECSRenderSystem.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\ECSPhysicsSystem.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\ECSMovementSystem.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Systems\CameraSystem.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\include\Window.h">
+    <ClInclude Include="include\Application\Game.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Graphics.h">
+    <ClInclude Include="include\Application\Scene.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Camera.h">
+    <ClInclude Include="include\EntityComponentSystem\Bullet.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Mesh.h">
+    <ClInclude Include="include\EntityComponentSystem\Camera.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\GameObject.h">
+    <ClInclude Include="include\EntityComponentSystem\GameObject.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Input.h">
+    <ClInclude Include="include\EntityComponentSystem\Gun.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Game.h">
+    <ClInclude Include="include\EntityComponentSystem\HealthObject.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\EnginePCH.h">
+    <ClInclude Include="include\EntityComponentSystem\Player.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Material.h">
+    <ClInclude Include="include\Input\Input.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\ModelLoader.h">
+    <ClInclude Include="include\Physics\Collider.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\TextureLoader.h">
+    <ClInclude Include="include\Physics\Collision.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\SimpleFont.h">
+    <ClInclude Include="include\Physics\PhysicsBody.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Shader.h">
+    <ClInclude Include="include\Physics\PhysicsConstants.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Skybox.h">
+    <ClInclude Include="include\Physics\PhysicsSystem.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\PostProcess.h">
+    <ClInclude Include="include\Platform\Window.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Renderer.h">
+    <ClInclude Include="include\Renderer\BloomEffect.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\AssetManager.h">
+    <ClInclude Include="include\Renderer\Graphics.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Collision.h">
+    <ClInclude Include="include\Renderer\Material.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\UIRenderer.h">
+    <ClInclude Include="include\Renderer\Mesh.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\PhysicsSystem.h">
+    <ClInclude Include="include\Renderer\MeshUtils.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Player.h">
+    <ClInclude Include="include\Renderer\PostProcess.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Bullet.h">
+    <ClInclude Include="include\Renderer\Renderer.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Gun.h">
+    <ClInclude Include="include\Renderer\RenderingConstants.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\HealthObject.h">
+    <ClInclude Include="include\Renderer\Skybox.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Transform.h">
+    <ClInclude Include="include\ResourceManagement\AssetManager.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Crosshair.h">
+    <ClInclude Include="include\ResourceManagement\FontLoader.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Scene.h">
+    <ClInclude Include="include\ResourceManagement\ModelLoader.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\PhysicsBody.h">
+    <ClInclude Include="include\ResourceManagement\Shader.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Collider.h">
+    <ClInclude Include="include\ResourceManagement\TextureLoader.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\MeshUtils.h">
+    <ClInclude Include="include\UI\Crosshair.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\PhysicsConstants.h">
+    <ClInclude Include="include\UI\SimpleFont.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\RenderingConstants.h">
+    <ClInclude Include="include\UI\UIRenderer.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\Logger.h">
+    <ClInclude Include="include\Utils\EnginePCH.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\FontLoader.h">
+    <ClInclude Include="include\Utils\Logger.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\BloomEffect.h">
+    <ClInclude Include="include\Utils\Transform.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\UI\DebugUIRenderer.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ResourceManagement\SceneLoader.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ResourceManagement\JsonParser.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Renderer\Camera.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\SystemManager.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\System.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Entity.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Components.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\ComponentManager.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\WeaponSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\ProjectileSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\PlayerMovementSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\HealthSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\ECSRenderSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\ECSPhysicsSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\ECSMovementSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\CameraSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Config\GameConfig.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
