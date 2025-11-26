@@ -160,8 +160,8 @@ void DebugUIRenderer::Render(
             ECS::HealthComponent& health = healthArray->GetData(entity);
 
             char healthBuffer[128];
-            snprintf(healthBuffer, sizeof(healthBuffer), "Entity %d: %.1f / %.1f %s", 
-                entity, health.currentHealth, health.maxHealth, health.isDead ? "(DEAD)" : "");
+            snprintf(healthBuffer, sizeof(healthBuffer), "Entity %u: %.1f / %.1f %s", 
+                entity.id, health.currentHealth, health.maxHealth, health.isDead ? "(DEAD)" : "");
             
             // Color code based on health
             float* color = green;

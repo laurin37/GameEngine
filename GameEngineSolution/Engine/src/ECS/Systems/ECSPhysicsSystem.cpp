@@ -6,17 +6,26 @@ using namespace PhysicsConstants;
 
 namespace ECS {
 
+void PhysicsSystem::Init() {
+    // Cache component arrays for performance
+    m_physicsArray = m_componentManager.GetComponentArray<PhysicsComponent>();
+    m_transformArray = m_componentManager.GetComponentArray<TransformComponent>();
+    m_colliderArray = m_componentManager.GetComponentArray<ColliderComponent>();
+}
+
 void PhysicsSystem::Update(float deltaTime) {
     // Clamp deltaTime for safety
     if (deltaTime < MIN_DELTA_TIME) deltaTime = MIN_DELTA_TIME;
     if (deltaTime > MAX_DELTA_TIME) deltaTime = MAX_DELTA_TIME;
     
-    // Iterate over all physics components
-    auto physicsArray = m_componentManager.GetComponentArray<PhysicsComponent>();
-    auto& physicsVec = physicsArray->GetComponentArray();
+    // Rebuild spatial grid for this frame
+    RebuildSpatialGrid();
+    
+    // Iterate over all physics components (cached array)
+    auto& physicsVec = m_physicsArray->GetComponentArray();
     
     for (size_t i = 0; i < physicsVec.size(); ++i) {
-        Entity entity = physicsArray->GetEntityAtIndex(i);
+        Entity entity = m_physicsArray->GetEntityAtIndex(i);
         PhysicsComponent& physics = physicsVec[i];
         
         // We need a transform to do anything
@@ -38,6 +47,42 @@ void PhysicsSystem::Update(float deltaTime) {
         if (physics.checkCollisions) {
             CheckGroundCollision(entity, transform, physics);
         }
+    }
+}
+
+void PhysicsSystem::RebuildSpatialGrid() {
+    // Clear previous frame's data
+    m_spatialGrid.Clear();
+    
+    // Insert all colliders into the grid
+    auto& colliderVec = m_colliderArray->GetComponentArray();
+    
+    for (size_t i = 0; i < colliderVec.size(); ++i) {
+        Entity entity = m_colliderArray->GetEntityAtIndex(i);
+        const ColliderComponent& collider = colliderVec[i];
+        
+        if (!collider.enabled) continue;
+        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
+        
+        const TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
+        
+        // Calculate world-space AABB
+        AABB worldAABB;
+        worldAABB.extents = {
+            collider.localAABB.extents.x * transform.scale.x,
+            collider.localAABB.extents.y * transform.scale.y,
+            collider.localAABB.extents.z * transform.scale.z
+        };
+        
+        float centerOffsetY = collider.localAABB.center.y * transform.scale.y;
+        worldAABB.center = {
+            transform.position.x,
+            transform.position.y + centerOffsetY,
+            transform.position.z
+        };
+        
+        // Insert into spatial grid
+        m_spatialGrid.Insert(entity, worldAABB);
     }
 }
 
@@ -66,17 +111,16 @@ void PhysicsSystem::IntegrateVelocity(TransformComponent& transform, PhysicsComp
 }
 
 void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& transform, PhysicsComponent& physics) {
-    // Full collision detection with other entities
+    // Full collision detection using spatial grid
     if (!m_componentManager.HasComponent<ColliderComponent>(entity)) return;
     
     ColliderComponent& myCollider = m_componentManager.GetComponent<ColliderComponent>(entity);
     if (!myCollider.enabled) return;
     
-    // Reset grounded state (will be set to true if we hit something below us)
+    // Reset grounded state
     physics.isGrounded = false;
     
     // Calculate my world-space AABB
-    DirectX::XMFLOAT3 myMin, myMax;
     DirectX::XMFLOAT3 myExtents = {
         myCollider.localAABB.extents.x * transform.scale.x,
         myCollider.localAABB.extents.y * transform.scale.y,
@@ -86,6 +130,7 @@ void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& tran
     float colliderCenterOffsetY = myCollider.localAABB.center.y * transform.scale.y;
     float colliderCenterY = transform.position.y + colliderCenterOffsetY;
     
+    DirectX::XMFLOAT3 myMin, myMax;
     myMin.x = transform.position.x - myExtents.x;
     myMin.y = colliderCenterY - myExtents.y;
     myMin.z = transform.position.z - myExtents.z;
@@ -93,19 +138,24 @@ void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& tran
     myMax.y = colliderCenterY + myExtents.y;
     myMax.z = transform.position.z + myExtents.z;
     
-    // Check against all other entities with colliders
-    auto colliderArray = m_componentManager.GetComponentArray<ColliderComponent>();
-    auto& colliderVec = colliderArray->GetComponentArray();
+    // Query spatial grid for nearby entities (HUGE performance improvement!)
+    AABB queryBounds;
+    queryBounds.center = { transform.position.x, colliderCenterY, transform.position.z };
+    queryBounds.extents = myExtents;
     
-    for (size_t i = 0; i < colliderVec.size(); ++i) {
-        Entity other = colliderArray->GetEntityAtIndex(i);
+    std::vector<Entity> nearbyEntities = m_spatialGrid.Query(queryBounds);
+    
+    // Check collisions only with nearby entities
+    for (Entity other : nearbyEntities) {
         if (other == entity) continue; // Skip self
         
-        ColliderComponent& otherCollider = colliderVec[i];
-        if (!otherCollider.enabled) continue;
+        if (!m_componentManager.HasComponent<ColliderComponent>(other)) continue;
+        const ColliderComponent& otherCollider = m_componentManager.GetComponent<ColliderComponent>(other);
         
+        if (!otherCollider.enabled) continue;
         if (!m_componentManager.HasComponent<TransformComponent>(other)) continue;
-        TransformComponent& otherTransform = m_componentManager.GetComponent<TransformComponent>(other);
+        
+        const TransformComponent& otherTransform = m_componentManager.GetComponent<TransformComponent>(other);
         
         // Calculate other's world-space AABB
         DirectX::XMFLOAT3 otherExtents = {
@@ -172,3 +222,4 @@ void PhysicsSystem::CheckGroundCollision(Entity entity, TransformComponent& tran
 }
 
 } // namespace ECS
+

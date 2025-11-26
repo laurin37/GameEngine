@@ -15,7 +15,8 @@ enum class EventType
     None = 0,
     WindowClose, WindowResize, WindowFocus, WindowLostFocus,
     KeyPressed, KeyReleased, KeyTyped,
-    MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
+    MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled,
+    ComponentAdded, ComponentRemoved, EntityDestroyed
 };
 
 enum EventCategory
@@ -25,7 +26,8 @@ enum EventCategory
     EventCategoryInput          = 1 << 1,
     EventCategoryKeyboard       = 1 << 2,
     EventCategoryMouse          = 1 << 3,
-    EventCategoryMouseButton    = 1 << 4
+    EventCategoryMouseButton    = 1 << 4,
+    EventCategoryECS            = 1 << 5
 };
 
 class Event

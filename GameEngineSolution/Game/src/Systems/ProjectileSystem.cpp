@@ -120,8 +120,8 @@ void ProjectileSystem::Update(float deltaTime) {
         }
 
         if (hit) {
-            std::string hitMsg = std::format("Projectile hit Entity {}!", hitEntity);
-            std::cout << hitMsg << std::endl;
+            //std::string hitMsg = std::format("Projectile hit Entity {}!", hitEntity);
+            //std::cout << hitMsg << std::endl;
             
             if (m_componentManager.HasComponent<ECS::HealthComponent>(hitEntity)) {
                 auto& health = m_componentManager.GetComponent<ECS::HealthComponent>(hitEntity);

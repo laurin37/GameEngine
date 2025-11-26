@@ -8,13 +8,19 @@ using namespace DirectX;
 
 namespace ECS {
 
+void PlayerMovementSystem::Init() {
+    // Cache component arrays for performance
+    m_controllerArray = m_componentManager.GetComponentArray<PlayerControllerComponent>();
+    m_transformArray = m_componentManager.GetComponentArray<TransformComponent>();
+    m_physicsArray = m_componentManager.GetComponentArray<PhysicsComponent>();
+}
+
 void PlayerMovementSystem::Update(float deltaTime) {
-    // Iterate over all player controller components
-    auto controllerArray = m_componentManager.GetComponentArray<PlayerControllerComponent>();
-    auto& controllerVec = controllerArray->GetComponentArray();
+    // Iterate over all player controller components (cached array)
+    auto& controllerVec = m_controllerArray->GetComponentArray();
     
     for (size_t i = 0; i < controllerVec.size(); ++i) {
-        Entity entity = controllerArray->GetEntityAtIndex(i);
+        Entity entity = m_controllerArray->GetEntityAtIndex(i);
         PlayerControllerComponent& controller = controllerVec[i];
         
         if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
@@ -100,13 +106,11 @@ void PlayerMovementSystem::OnEvent(Event& e)
     
     if (event.GetKeyCode() == VK_SPACE)
     {
-        
-        // Iterate over all player controller components
-        auto controllerArray = m_componentManager.GetComponentArray<PlayerControllerComponent>();
-        auto& controllerVec = controllerArray->GetComponentArray();
+        // Iterate over all player controller components (cached array)
+        auto& controllerVec = m_controllerArray->GetComponentArray();
 
         for (size_t i = 0; i < controllerVec.size(); ++i) {
-            Entity entity = controllerArray->GetEntityAtIndex(i);
+            Entity entity = m_controllerArray->GetEntityAtIndex(i);
             PlayerControllerComponent& controller = controllerVec[i];
 
             if (!m_componentManager.HasComponent<PhysicsComponent>(entity)) continue;
@@ -122,3 +126,4 @@ void PlayerMovementSystem::OnEvent(Event& e)
 }
 
 } // namespace ECS
+

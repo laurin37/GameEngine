@@ -6,13 +6,18 @@ using namespace DirectX;
 
 namespace ECS {
 
+void CameraSystem::Init() {
+    // Cache component arrays for performance
+    m_cameraArray = m_componentManager.GetComponentArray<CameraComponent>();
+    m_transformArray = m_componentManager.GetComponentArray<TransformComponent>();
+}
+
 void CameraSystem::Update(float deltaTime) {
-    // Iterate over all camera components
-    auto cameraArray = m_componentManager.GetComponentArray<CameraComponent>();
-    auto& cameraVec = cameraArray->GetComponentArray();
+    // Iterate over all camera components (cached array)
+    auto& cameraVec = m_cameraArray->GetComponentArray();
     
     for (size_t i = 0; i < cameraVec.size(); ++i) {
-        Entity entity = cameraArray->GetEntityAtIndex(i);
+        Entity entity = m_cameraArray->GetEntityAtIndex(i);
         CameraComponent& camera = cameraVec[i];
         
         if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
@@ -71,12 +76,11 @@ bool CameraSystem::GetActiveCamera(DirectX::XMMATRIX& viewOut, DirectX::XMMATRIX
 }
 
 Entity CameraSystem::GetActiveCameraEntity() {
-    auto cameraArray = m_componentManager.GetComponentArray<CameraComponent>();
-    // Iterate to find active camera
+    // Iterate to find active camera (cached array)
     // Note: This is O(N) where N is number of cameras (usually small)
-    for (size_t i = 0; i < cameraArray->GetSize(); ++i) {
-        Entity entity = cameraArray->GetEntityAtIndex(i);
-        CameraComponent& cam = cameraArray->GetData(entity);
+    for (size_t i = 0; i < m_cameraArray->GetSize(); ++i) {
+        Entity entity = m_cameraArray->GetEntityAtIndex(i);
+        CameraComponent& cam = m_cameraArray->GetData(entity);
         if (cam.isActive) {
             return entity;
         }
