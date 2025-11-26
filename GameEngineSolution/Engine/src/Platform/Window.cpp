@@ -144,7 +144,6 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         {
             int keycode = static_cast<int>(wParam);
             int repeatCount = lParam & 0xFFFF;
-            LOG_INFO("Window: Key Down " + std::to_string(keycode)); 
             KeyPressedEvent event(keycode, repeatCount);
             if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             return 0;

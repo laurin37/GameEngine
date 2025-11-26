@@ -93,35 +93,32 @@ void PlayerMovementSystem::HandleMouseLook(Entity entity, TransformComponent& tr
 
 void PlayerMovementSystem::OnEvent(Event& e)
 {
-    LOG_INFO("PlayerMovementSystem::OnEvent called. Event: " + e.ToString() + ", Type: " + std::to_string((int)e.GetEventType()));
-    EventDispatcher dispatcher(e);
-    dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& event) {
-        if (event.GetKeyCode() == VK_SPACE)
-        {
-            LOG_INFO("Space pressed in PlayerMovementSystem");
-            // Iterate over all player controller components
-            auto controllerArray = m_componentManager.GetComponentArray<PlayerControllerComponent>();
-            auto& controllerVec = controllerArray->GetComponentArray();
+    // Only handle KeyPressed events
+    if (e.GetEventType() != EventType::KeyPressed) return;
+    
+    KeyPressedEvent& event = static_cast<KeyPressedEvent&>(e);
+    
+    if (event.GetKeyCode() == VK_SPACE)
+    {
+        
+        // Iterate over all player controller components
+        auto controllerArray = m_componentManager.GetComponentArray<PlayerControllerComponent>();
+        auto& controllerVec = controllerArray->GetComponentArray();
 
-            for (size_t i = 0; i < controllerVec.size(); ++i) {
-                Entity entity = controllerArray->GetEntityAtIndex(i);
-                PlayerControllerComponent& controller = controllerVec[i];
+        for (size_t i = 0; i < controllerVec.size(); ++i) {
+            Entity entity = controllerArray->GetEntityAtIndex(i);
+            PlayerControllerComponent& controller = controllerVec[i];
 
-                if (!m_componentManager.HasComponent<PhysicsComponent>(entity)) continue;
-                PhysicsComponent& physics = m_componentManager.GetComponent<PhysicsComponent>(entity);
+            if (!m_componentManager.HasComponent<PhysicsComponent>(entity)) continue;
+            PhysicsComponent& physics = m_componentManager.GetComponent<PhysicsComponent>(entity);
 
-                LOG_INFO("Checking jump for entity %d. Grounded: %d, CanJump: %d", entity, physics.isGrounded, controller.canJump);
-
-                // Jump logic
-                if (physics.isGrounded && controller.canJump) {
-                    physics.velocity.y = controller.jumpForce;
-                    LOG_INFO("JUMP!");
-                }
+            // Jump logic
+            if (physics.isGrounded && controller.canJump) {
+                physics.velocity.y = controller.jumpForce;
+                e.Handled = true;
             }
-            return true;
         }
-        return false;
-    });
+    }
 }
 
 } // namespace ECS
