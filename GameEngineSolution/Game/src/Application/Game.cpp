@@ -1,4 +1,5 @@
 #include "Application/Game.h"
+#include "Events/ApplicationEvents.h"
 
 #include "ResourceManagement/AssetManager.h" 
 #include "UI/UIRenderer.h"
@@ -127,4 +128,27 @@ void Game::Render()
     }
 
     m_graphics.Present();
+}
+
+void Game::OnEvent(Event& e)
+{
+    // Dispatch events to specific handlers
+    EventDispatcher dispatcher(e);
+    
+    // Example: Handle Window Resize
+    dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
+        // Resize swap chain and buffers
+        // m_graphics.Resize(event.GetWidth(), event.GetHeight()); // TODO: Implement Graphics::Resize
+        // m_renderer->OnResize(event.GetWidth(), event.GetHeight()); // TODO: Implement Renderer::OnResize
+        return false;
+    });
+
+    // Example: Handle Window Close
+    dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
+        PostQuitMessage(0);
+        return true;
+    });
+
+    // Propagate event to Scene/Systems if not handled
+    // if (m_scene) m_scene->OnEvent(e);
 }

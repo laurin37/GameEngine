@@ -10,6 +10,7 @@
 #include "Renderer/Renderer.h"
 #include "UI/UIRenderer.h"
 #include "Application/Scene.h"
+#include "Events/EventBus.h"
 
 class AssetManager; // Forward Declaration
 
@@ -25,9 +26,11 @@ public:
 private:
     void Update(float deltaTime);
     void Render();
+    void OnEvent(Event& e);
 
     // System Objects
     Window m_window;
+    EventBus m_eventBus;
     Graphics m_graphics;
     Input m_input;
 

@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 #include <windows.h>
+#include <functional>
+#include "../Events/Event.h"
 
 enum class Action {
     MoveForward,
@@ -29,6 +31,7 @@ public:
     };
 
     void Initialize(HWND hwnd);
+    void SetEventCallback(const std::function<void(Event&)>& callback) { m_EventCallback = callback; }
     void Update();
 
     bool IsKeyDown(int key) const;
@@ -46,4 +49,5 @@ private:
     bool m_keys[256];
     MouseState m_mouseState;
     std::unordered_map<Action, int> m_actionBindings;
+    std::function<void(Event&)> m_EventCallback;
 };

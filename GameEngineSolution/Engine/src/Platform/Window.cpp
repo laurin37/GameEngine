@@ -1,6 +1,8 @@
 #include <stdexcept>
 
 #include "../../include/Platform/Window.h"
+#include "../../include/Events/ApplicationEvents.h"
+#include "../../include/Events/InputEvents.h"
 
 Window::Window()
     : m_hWnd(nullptr), m_hInstance(nullptr), m_width(0), m_height(0)
@@ -116,11 +118,75 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         switch (message)
         {
         case WM_CLOSE:
+        {
+            WindowCloseEvent event;
+            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
             DestroyWindow(hWnd);
             return 0;
+        }
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
+        case WM_SIZE:
+        {
+            int width = LOWORD(lParam);
+            int height = HIWORD(lParam);
+            pWindow->m_width = width;
+            pWindow->m_height = height;
+            
+            WindowResizeEvent event(width, height);
+            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            return 0;
+        }
+        case WM_KEYDOWN:
+        {
+            int keycode = static_cast<int>(wParam);
+            int repeatCount = lParam & 0xFFFF;
+            KeyPressedEvent event(keycode, repeatCount);
+            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            return 0;
+        }
+        case WM_KEYUP:
+        {
+            int keycode = static_cast<int>(wParam);
+            KeyReleasedEvent event(keycode);
+            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            return 0;
+        }
+        case WM_MOUSEMOVE:
+        {
+            int x = LOWORD(lParam);
+            int y = HIWORD(lParam);
+            MouseMovedEvent event((float)x, (float)y);
+            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            return 0;
+        }
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+        {
+            int button = 0;
+            if (message == WM_LBUTTONDOWN) button = VK_LBUTTON;
+            else if (message == WM_RBUTTONDOWN) button = VK_RBUTTON;
+            else if (message == WM_MBUTTONDOWN) button = VK_MBUTTON;
+
+            MouseButtonPressedEvent event(button);
+            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            return 0;
+        }
+        case WM_LBUTTONUP:
+        case WM_RBUTTONUP:
+        case WM_MBUTTONUP:
+        {
+            int button = 0;
+            if (message == WM_LBUTTONUP) button = VK_LBUTTON;
+            else if (message == WM_RBUTTONUP) button = VK_RBUTTON;
+            else if (message == WM_MBUTTONUP) button = VK_MBUTTON;
+
+            MouseButtonReleasedEvent event(button);
+            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            return 0;
+        }
         }
     }
 
