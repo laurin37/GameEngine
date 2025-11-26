@@ -7,6 +7,7 @@
 #include <format>
 
 #include "../../include/Renderer/MeshUtils.h"
+#include "../../include/ECS/EntityBuilder.h"
 
 // Helper to calculate AABB from mesh (same as in Scene.cpp)
 static ECS::ColliderComponent CalculateCollider(const Mesh* mesh) {
@@ -60,12 +61,13 @@ void SceneLoader::LoadScene(
             throw std::runtime_error(std::format("Entity {} must be an object", i));
         }
         
-        // Create entity
-        ECS::Entity entity = componentManager.CreateEntity();
+        // Create entity builder
+        ECS::EntityBuilder builder(componentManager);
         
         // Check for components object
         if (!entityDef.HasField("components")) {
-            continue; // Entity with no components (valid but useless)
+            builder.Build(); // Just create empty entity
+            continue; 
         }
         
         const JsonValue& components = entityDef.GetField("components");
@@ -78,76 +80,68 @@ void SceneLoader::LoadScene(
         
         // Parse Transform
         if (components.HasField("transform")) {
-            ECS::TransformComponent transform = ParseTransform(components.GetField("transform"));
-            componentManager.AddComponent<ECS::TransformComponent>(entity, transform);
+            builder.With(ParseTransform(components.GetField("transform")));
         }
         
         // Parse Render (must come before collider for auto-generation)
         if (components.HasField("render")) {
             ECS::RenderComponent render = ParseRender(components.GetField("render"), meshLookup, materialLookup);
-            componentManager.AddComponent<ECS::RenderComponent>(entity, render);
+            builder.With(render);
             entityMesh = render.mesh;
         }
         
         // Parse Physics
         if (components.HasField("physics")) {
-            ECS::PhysicsComponent physics = ParsePhysics(components.GetField("physics"));
-            componentManager.AddComponent<ECS::PhysicsComponent>(entity, physics);
+            builder.With(ParsePhysics(components.GetField("physics")));
         }
         
         // Parse Collider
         if (components.HasField("collider")) {
-            ECS::ColliderComponent collider = ParseCollider(components.GetField("collider"), entityMesh);
-            componentManager.AddComponent<ECS::ColliderComponent>(entity, collider);
+            builder.With(ParseCollider(components.GetField("collider"), entityMesh));
         }
         
         // Parse Light
         if (components.HasField("light")) {
-            ECS::LightComponent light = ParseLight(components.GetField("light"));
-            componentManager.AddComponent<ECS::LightComponent>(entity, light);
+            builder.With(ParseLight(components.GetField("light")));
         }
         
         // Parse Rotate
         if (components.HasField("rotate")) {
-            ECS::RotateComponent rotate = ParseRotate(components.GetField("rotate"));
-            componentManager.AddComponent<ECS::RotateComponent>(entity, rotate);
+            builder.With(ParseRotate(components.GetField("rotate")));
         }
         
         // Parse Orbit
         if (components.HasField("orbit")) {
-            ECS::OrbitComponent orbit = ParseOrbit(components.GetField("orbit"));
-            componentManager.AddComponent<ECS::OrbitComponent>(entity, orbit);
+            builder.With(ParseOrbit(components.GetField("orbit")));
         }
         
         // Parse PlayerController
         if (components.HasField("playerController")) {
-            ECS::PlayerControllerComponent controller = ParsePlayerController(components.GetField("playerController"));
-            componentManager.AddComponent<ECS::PlayerControllerComponent>(entity, controller);
+            builder.With(ParsePlayerController(components.GetField("playerController")));
         }
 
         // Parse Camera
         if (components.HasField("camera")) {
-            ECS::CameraComponent camera = ParseCamera(components.GetField("camera"));
-            componentManager.AddComponent<ECS::CameraComponent>(entity, camera);
+            builder.With(ParseCamera(components.GetField("camera")));
         }
 
         // Parse Health
         if (components.HasField("health")) {
-            ECS::HealthComponent health = ParseHealth(components.GetField("health"));
-            componentManager.AddComponent<ECS::HealthComponent>(entity, health);
+            builder.With(ParseHealth(components.GetField("health")));
         }
 
         // Parse Weapon
         if (components.HasField("weapon")) {
-            ECS::WeaponComponent weapon = ParseWeapon(components.GetField("weapon"));
-            componentManager.AddComponent<ECS::WeaponComponent>(entity, weapon);
+            builder.With(ParseWeapon(components.GetField("weapon")));
         }
 
         // Parse Projectile
         if (components.HasField("projectile")) {
-            ECS::ProjectileComponent projectile = ParseProjectile(components.GetField("projectile"));
-            componentManager.AddComponent<ECS::ProjectileComponent>(entity, projectile);
+            builder.With(ParseProjectile(components.GetField("projectile")));
         }
+        
+        // Finalize entity
+        builder.Build();
     }
 }
 

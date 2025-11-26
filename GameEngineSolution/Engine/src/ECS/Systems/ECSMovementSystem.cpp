@@ -5,15 +5,11 @@ namespace ECS {
 
 void MovementSystem::Update(float deltaTime) {
     // --- Handle Rotation ---
-    auto rotateArray = m_componentManager.GetComponentArray<RotateComponent>();
-    auto& rotateVec = rotateArray->GetComponentArray();
+    auto rotateEntities = m_componentManager.QueryEntities<RotateComponent, TransformComponent>();
     
-    for (size_t i = 0; i < rotateVec.size(); ++i) {
-        Entity entity = rotateArray->GetEntityAtIndex(i);
-        RotateComponent& rotate = rotateVec[i];
-        
-        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
+    for (Entity entity : rotateEntities) {
+        auto& rotate = m_componentManager.GetComponent<RotateComponent>(entity);
+        auto& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Simple Euler integration for rotation
         transform.rotation.x += rotate.axis.x * rotate.speed * deltaTime;
@@ -22,15 +18,11 @@ void MovementSystem::Update(float deltaTime) {
     }
 
     // --- Handle Orbiting ---
-    auto orbitArray = m_componentManager.GetComponentArray<OrbitComponent>();
-    auto& orbitVec = orbitArray->GetComponentArray();
+    auto orbitEntities = m_componentManager.QueryEntities<OrbitComponent, TransformComponent>();
     
-    for (size_t i = 0; i < orbitVec.size(); ++i) {
-        Entity entity = orbitArray->GetEntityAtIndex(i);
-        OrbitComponent& orbit = orbitVec[i];
-        
-        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
+    for (Entity entity : orbitEntities) {
+        auto& orbit = m_componentManager.GetComponent<OrbitComponent>(entity);
+        auto& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Update angle
         orbit.angle += orbit.speed * deltaTime;

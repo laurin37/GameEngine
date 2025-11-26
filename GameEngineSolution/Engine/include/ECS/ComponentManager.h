@@ -12,6 +12,7 @@
 #include <bitset>
 #include <shared_mutex>
 #include <algorithm>
+#include <limits>
 
 // Forward declare EventBus
 class EventBus;
@@ -33,6 +34,7 @@ public:
     virtual ~IComponentArray() = default;
     virtual void EntityDestroyed(Entity entity) = 0;
     virtual size_t GetSize() const = 0;
+    virtual Entity GetEntityAtIndex(size_t index) const = 0;
 };
 
 // ========================================
@@ -150,7 +152,7 @@ public:
     }
     
     // Helper to get entity for a specific index
-    Entity GetEntityAtIndex(size_t index) const {
+    Entity GetEntityAtIndex(size_t index) const override {
         std::shared_lock<std::shared_mutex> lock(m_mutex);
         if (index >= m_indexToEntity.size()) {
             throw std::runtime_error("Index out of range");
@@ -367,19 +369,55 @@ public:
     // ========================================
     
     // Query entities with specific components
+    // Query entities with specific components
     template<typename... Components>
     std::vector<Entity> QueryEntities() const {
         // Build required signature
         Signature requiredSignature;
         (requiredSignature.set(GetComponentTypeID_Const<Components>()), ...);
         
+        // Find the smallest component array to iterate
+        std::shared_ptr<IComponentArray> smallestArray = nullptr;
+        size_t minSize = (std::numeric_limits<size_t>::max)();
+        
+        // Helper lambda to check array size
+        auto checkArray = [&](std::type_index typeIdx) {
+            auto it = m_componentArrays.find(typeIdx);
+            if (it != m_componentArrays.end()) {
+                size_t size = it->second->GetSize();
+                if (size < minSize) {
+                    minSize = size;
+                    smallestArray = it->second;
+                }
+            } else {
+                // If a component array doesn't exist, no entities have this component
+                // So the result is empty.
+                minSize = 0;
+                smallestArray = nullptr;
+            }
+        };
+        
+        // Check all component types
+        (checkArray(std::type_index(typeid(Components))), ...);
+        
         std::vector<Entity> result;
-        for (const auto& [entity, signature] : m_signatures) {
-            // Check if entity has all required components
-            if ((signature & requiredSignature) == requiredSignature) {
+        
+        // If any component array is missing or empty, result is empty
+        if (minSize == 0 || !smallestArray) {
+            return result;
+        }
+        
+        // Iterate the smallest array
+        result.reserve(minSize);
+        for (size_t i = 0; i < minSize; ++i) {
+            Entity entity = smallestArray->GetEntityAtIndex(i);
+            
+            // Check against signature (O(1))
+            if (EntityMatchesSignature(entity, requiredSignature)) {
                 result.push_back(entity);
             }
         }
+        
         return result;
     }
     

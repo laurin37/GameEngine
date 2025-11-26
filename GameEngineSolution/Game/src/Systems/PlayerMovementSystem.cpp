@@ -1,6 +1,7 @@
 #include "Systems/PlayerMovementSystem.h"
 #include "Input/Input.h"
 #include "Events/InputEvents.h"
+#include "Events/EventBus.h"
 #include <DirectXMath.h>
 #include "Utils/Logger.h"
 
@@ -13,6 +14,13 @@ void PlayerMovementSystem::Init() {
     m_controllerArray = m_componentManager.GetComponentArray<PlayerControllerComponent>();
     m_transformArray = m_componentManager.GetComponentArray<TransformComponent>();
     m_physicsArray = m_componentManager.GetComponentArray<PhysicsComponent>();
+    
+    // Subscribe to keyboard events (EventBus set by SystemManager)
+    if (m_eventBus) {
+        m_eventBus->Subscribe(EventType::KeyPressed, [this](Event& e) {
+            this->OnEvent(e);
+        });
+    }
 }
 
 void PlayerMovementSystem::Update(float deltaTime) {

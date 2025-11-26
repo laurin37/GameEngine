@@ -30,10 +30,17 @@ public:
     }
 
     // Register a new system
+    // Register a new system
     template<typename T, typename... Args>
     T* AddSystem(ComponentManager& componentManager, Args&&... args) {
         auto system = std::make_unique<T>(componentManager, std::forward<Args>(args)...);
         T* systemPtr = system.get();
+        
+        // Set event bus if available (BEFORE Init so system can subscribe)
+        if (m_eventBus) {
+            systemPtr->SetEventBus(m_eventBus);
+        }
+        
         m_systems.push_back(std::move(system));
         systemPtr->Init();
         return systemPtr;
@@ -106,6 +113,7 @@ public:
     
     // Set event bus for all systems
     void SetEventBus(EventBus* eventBus) {
+        m_eventBus = eventBus;
         for (auto& system : m_systems) {
             system->SetEventBus(eventBus);
         }
@@ -128,6 +136,7 @@ private:
     }
 
     std::vector<std::unique_ptr<System>> m_systems;
+    EventBus* m_eventBus = nullptr;
     bool m_needsSort = true;
 };
 

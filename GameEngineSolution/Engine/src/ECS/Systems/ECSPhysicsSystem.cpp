@@ -21,16 +21,12 @@ void PhysicsSystem::Update(float deltaTime) {
     // Rebuild spatial grid for this frame
     RebuildSpatialGrid();
     
-    // Iterate over all physics components (cached array)
-    auto& physicsVec = m_physicsArray->GetComponentArray();
+    // Use Query API to get entities with both Physics and Transform
+    auto entities = m_componentManager.QueryEntities<PhysicsComponent, TransformComponent>();
     
-    for (size_t i = 0; i < physicsVec.size(); ++i) {
-        Entity entity = m_physicsArray->GetEntityAtIndex(i);
-        PhysicsComponent& physics = physicsVec[i];
-        
-        // We need a transform to do anything
-        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
-        TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
+    for (Entity entity : entities) {
+        auto& physics = m_componentManager.GetComponent<PhysicsComponent>(entity);
+        auto& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Apply physics forces
         if (physics.useGravity) {
@@ -55,16 +51,14 @@ void PhysicsSystem::RebuildSpatialGrid() {
     m_spatialGrid.Clear();
     
     // Insert all colliders into the grid
-    auto& colliderVec = m_colliderArray->GetComponentArray();
+    auto entities = m_componentManager.QueryEntities<ColliderComponent, TransformComponent>();
     
-    for (size_t i = 0; i < colliderVec.size(); ++i) {
-        Entity entity = m_colliderArray->GetEntityAtIndex(i);
-        const ColliderComponent& collider = colliderVec[i];
+    for (Entity entity : entities) {
+        const auto& collider = m_componentManager.GetComponent<ColliderComponent>(entity);
         
         if (!collider.enabled) continue;
-        if (!m_componentManager.HasComponent<TransformComponent>(entity)) continue;
         
-        const TransformComponent& transform = m_componentManager.GetComponent<TransformComponent>(entity);
+        const auto& transform = m_componentManager.GetComponent<TransformComponent>(entity);
         
         // Calculate world-space AABB
         AABB worldAABB;

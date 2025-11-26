@@ -21,6 +21,7 @@
 #include "Events/Event.h"
 #include "Events/EventBus.h"
 #include "Events/InputEvents.h"
+#include "Events/ECSEvents.h"
 
 #include <format>
 #include "Config/GameConfig.h"
@@ -34,7 +35,10 @@ Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input, Event
       m_dirLight{ {0.5f, -0.7f, 0.5f, 0.0f}, {0.2f, 0.2f, 0.3f, 1.0f} }
 {
     // Initialize Systems
-    // Note: Order matters for Update() calls in SystemManager
+    // Note: Order of adding systems doesn't matter - SystemPhase controls execution order
+    
+    // Set EventBus for SystemManager so it's passed to all new systems automatically
+    m_systemManager.SetEventBus(m_eventBus);
     
     // 1. Core Systems
     m_ecsPhysicsSystem = m_systemManager.AddSystem<ECS::PhysicsSystem>(m_ecsComponentManager);
@@ -51,17 +55,7 @@ Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input, Event
     
     // 3. Rendering System (needs to be updated manually or last)
     m_ecsRenderSystem = m_systemManager.AddSystem<ECS::RenderSystem>(m_ecsComponentManager);
-
-    // Subscribe systems to EventBus
-    if (m_eventBus && m_ecsPlayerMovementSystem) 
-    {
-        auto id = m_eventBus->Subscribe(EventType::KeyPressed, [this](Event& e) 
-        {
-            m_ecsPlayerMovementSystem->OnEvent(e);
-        }, EventPriority::Normal);
-        m_eventSubscriptions.push_back(id);
-    }
-
+    
     // Initialize UI
     m_crosshair = std::make_unique<Crosshair>();
     
@@ -80,10 +74,58 @@ Scene::~Scene()
 
 void Scene::Load()
 {
-
-// ... (inside Load)
-
-    // Load scene from JSON
+    // ========================================
+    // 1. Register all component types (MUST be done before creating entities!)
+    // ========================================
+    m_ecsComponentManager.RegisterComponent<ECS::TransformComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::PhysicsComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::RenderComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::ColliderComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::LightComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::PlayerControllerComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::CameraComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::HealthComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::WeaponComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::ProjectileComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::RotateComponent>();
+    m_ecsComponentManager.RegisterComponent<ECS::OrbitComponent>();
+    
+    // ========================================
+    // 2. Connect EventBus to ComponentManager for component lifecycle events
+    // ========================================
+    m_ecsComponentManager.SetEventBus(m_eventBus);
+    
+    // ========================================
+    // 3. Subscribe to component events for automatic render cache updates
+    // ========================================
+    if (m_eventBus) {
+        // Rebuild render cache when render/transform components are added
+        m_eventSubscriptions.push_back(
+            m_eventBus->Subscribe(EventType::ComponentAdded, [this](Event& e) {
+                auto& event = static_cast<ComponentAddedEvent&>(e);
+                
+                if (event.componentType == typeid(ECS::RenderComponent) ||
+                    event.componentType == typeid(ECS::TransformComponent)) {
+                    RebuildRenderCache();
+                }
+            })
+        );
+        
+        // Rebuild render cache when render components are removed
+        m_eventSubscriptions.push_back(
+            m_eventBus->Subscribe(EventType::ComponentRemoved, [this](Event& e) {
+                auto& event = static_cast<ComponentRemovedEvent&>(e);
+                
+                if (event.componentType == typeid(ECS::RenderComponent)) {
+                    RebuildRenderCache();
+                }
+            })
+        );
+    }
+    
+    // ========================================
+    // 4. Load scene from JSON
+    // ========================================
     LoadSceneFromJSON(Config::Paths::DefaultScene);
 
     // Load Font
@@ -241,24 +283,10 @@ void Scene::UpdateRenderCache()
 
         ++i;
     }
-
-    // Check for new entities
-    auto renderArray = m_ecsComponentManager.GetComponentArray<ECS::RenderComponent>();
-    auto& renderVec = renderArray->GetComponentArray();
     
-    for (size_t i = 0; i < renderVec.size(); ++i) {
-        ECS::Entity entity = renderArray->GetEntityAtIndex(i);
-        
-        if (m_entityToRenderCacheIndex.find(entity) != m_entityToRenderCacheIndex.end()) continue;
-        
-        ECS::RenderComponent& render = renderVec[i];
-        if (!render.mesh || !render.material) continue;
-        
-        if (!m_ecsComponentManager.HasComponent<ECS::TransformComponent>(entity)) continue;
-        ECS::TransformComponent& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(entity);
-        
-        CreateRenderCacheEntry(entity, &transform, &render);
-    }
+    // NOTE: No need to check for new entities manually!
+    // Component events (ComponentAddedEvent) trigger RebuildRenderCache() automatically.
+    // This eliminates the O(n) polling loop that was here before.
 }
 
 void Scene::RemoveRenderCacheEntry(size_t index)
@@ -349,17 +377,16 @@ bool Scene::TryComputeWorldBounds(ECS::Entity entity, const ECS::TransformCompon
 
 void Scene::GatherLights(std::vector<PointLight>& outLights)
 {
-    auto lightArray = m_ecsComponentManager.GetComponentArray<ECS::LightComponent>();
-    auto& lightVec = lightArray->GetComponentArray();
+    // Use Query API to get all entities with both LightComponent and TransformComponent
+    std::vector<ECS::Entity> lightEntities = 
+        m_ecsComponentManager.QueryEntities<ECS::LightComponent, ECS::TransformComponent>();
     
-    for (size_t i = 0; i < lightVec.size(); ++i) {
-        ECS::Entity entity = lightArray->GetEntityAtIndex(i);
-        ECS::LightComponent& light = lightVec[i];
+    for (ECS::Entity entity : lightEntities) {
+        // Guaranteed to have both components!
+        ECS::LightComponent& light = m_ecsComponentManager.GetComponent<ECS::LightComponent>(entity);
+        ECS::TransformComponent& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(entity);
         
         if (!light.enabled) continue;
-        
-        if (!m_ecsComponentManager.HasComponent<ECS::TransformComponent>(entity)) continue;
-        ECS::TransformComponent& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(entity);
         
         PointLight pl;
         pl.position = DirectX::XMFLOAT4(transform.position.x, transform.position.y, transform.position.z, light.range);
