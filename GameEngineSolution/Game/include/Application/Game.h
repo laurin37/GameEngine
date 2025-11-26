@@ -26,7 +26,7 @@ public:
 private:
     void Update(float deltaTime);
     void Render();
-    void OnEvent(Event& e);
+    void SubscribeToEvents();
 
     // System Objects
     Window m_window;

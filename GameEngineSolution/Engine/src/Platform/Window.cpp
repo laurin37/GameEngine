@@ -3,6 +3,8 @@
 #include "../../include/Platform/Window.h"
 #include "../../include/Events/ApplicationEvents.h"
 #include "../../include/Events/InputEvents.h"
+#include "../../include/Events/EventBus.h"
+#include "../../include/Utils/Logger.h"
 
 Window::Window()
     : m_hWnd(nullptr), m_hInstance(nullptr), m_width(0), m_height(0)
@@ -120,7 +122,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         case WM_CLOSE:
         {
             WindowCloseEvent event;
-            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             DestroyWindow(hWnd);
             return 0;
         }
@@ -135,22 +137,23 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             pWindow->m_height = height;
             
             WindowResizeEvent event(width, height);
-            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             return 0;
         }
         case WM_KEYDOWN:
         {
             int keycode = static_cast<int>(wParam);
             int repeatCount = lParam & 0xFFFF;
+            LOG_INFO("Window: Key Down " + std::to_string(keycode)); 
             KeyPressedEvent event(keycode, repeatCount);
-            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             return 0;
         }
         case WM_KEYUP:
         {
             int keycode = static_cast<int>(wParam);
             KeyReleasedEvent event(keycode);
-            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             return 0;
         }
         case WM_MOUSEMOVE:
@@ -158,7 +161,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             int x = LOWORD(lParam);
             int y = HIWORD(lParam);
             MouseMovedEvent event((float)x, (float)y);
-            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             return 0;
         }
         case WM_LBUTTONDOWN:
@@ -171,7 +174,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             else if (message == WM_MBUTTONDOWN) button = VK_MBUTTON;
 
             MouseButtonPressedEvent event(button);
-            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             return 0;
         }
         case WM_LBUTTONUP:
@@ -184,7 +187,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             else if (message == WM_MBUTTONUP) button = VK_MBUTTON;
 
             MouseButtonReleasedEvent event(button);
-            if (pWindow->m_EventCallback) pWindow->m_EventCallback(event);
+            if (pWindow->m_eventBus) pWindow->m_eventBus->Publish(event);
             return 0;
         }
         }

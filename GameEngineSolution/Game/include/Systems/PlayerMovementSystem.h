@@ -2,6 +2,7 @@
 
 #include "ECS/ComponentManager.h"
 #include "ECS/System.h"
+#include "Events/Event.h"
 
 // Forward declarations
 class Input;
@@ -18,12 +19,12 @@ public:
         : System(cm), m_input(input) {}
 
     void Update(float deltaTime) override;
+    void OnEvent(Event& e);
 
 private:
     Input& m_input;
     void HandleMovement(Entity entity, TransformComponent& transform, PhysicsComponent& physics, 
                        PlayerControllerComponent& controller, Input& input, float deltaTime);
-    void HandleJump(Entity entity, PhysicsComponent& physics, PlayerControllerComponent& controller, Input& input);
     void HandleMouseLook(Entity entity, TransformComponent& transform, PlayerControllerComponent& controller, 
                         Input& input, float deltaTime);
 };

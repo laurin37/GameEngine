@@ -2,8 +2,9 @@
 
 #include <Windows.h>
 #include <string>
-#include <functional>
 #include "../Events/Event.h"
+
+class EventBus;
 
 class Window
 {
@@ -24,7 +25,7 @@ public:
         int width,
         int height
     );
-    void SetEventCallback(const std::function<void(Event&)>& callback) { m_EventCallback = callback; }
+    void SetEventBus(EventBus* eventBus) { m_eventBus = eventBus; }
     bool ProcessMessages();
     HWND GetHWND() const;
 
@@ -38,5 +39,5 @@ private:
     int m_width;
     int m_height;
     
-    std::function<void(Event&)> m_EventCallback;
+    EventBus* m_eventBus = nullptr;
 };

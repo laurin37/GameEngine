@@ -18,14 +18,19 @@
 #include "Systems/HealthSystem.h"
 #include "Systems/WeaponSystem.h"
 #include "Systems/ProjectileSystem.h"
+#include "Events/Event.h"
+#include "Events/EventBus.h"
+#include "Events/InputEvents.h"
+
 #include <format>
 #include "Config/GameConfig.h"
 #include <cmath>
 
-Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input)
+Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input, EventBus* eventBus)
     : m_assetManager(assetManager), 
       m_graphics(graphics),
       m_input(input),
+      m_eventBus(eventBus),
       m_dirLight{ {0.5f, -0.7f, 0.5f, 0.0f}, {0.2f, 0.2f, 0.3f, 1.0f} }
 {
     // Initialize Systems
@@ -46,6 +51,13 @@ Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input)
     
     // 3. Rendering System (needs to be updated manually or last)
     m_ecsRenderSystem = m_systemManager.AddSystem<ECS::RenderSystem>(m_ecsComponentManager);
+
+    // Subscribe systems to EventBus
+    if (m_eventBus && m_ecsPlayerMovementSystem) {
+        m_eventBus->Subscribe(EventType::KeyPressed, [this](Event& e) {
+            m_ecsPlayerMovementSystem->OnEvent(e);
+        });
+    }
 
     // Initialize UI
     m_crosshair = std::make_unique<Crosshair>();

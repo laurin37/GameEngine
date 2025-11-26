@@ -1,6 +1,8 @@
 #include "Systems/PlayerMovementSystem.h"
 #include "Input/Input.h"
+#include "Events/InputEvents.h"
 #include <DirectXMath.h>
+#include "Utils/Logger.h"
 
 using namespace DirectX;
 
@@ -27,9 +29,6 @@ void PlayerMovementSystem::Update(float deltaTime) {
         // Handle movement (WASD)
         if (physics) {
             HandleMovement(entity, transform, *physics, controller, m_input, deltaTime);
-            
-            // Handle jump (Space)
-            HandleJump(entity, *physics, controller, m_input);
         }
     }
 }
@@ -69,14 +68,6 @@ void PlayerMovementSystem::HandleMovement(Entity entity, TransformComponent& tra
     }
 }
 
-void PlayerMovementSystem::HandleJump(Entity entity, PhysicsComponent& physics, 
-                                     PlayerControllerComponent& controller, Input& input) {
-    // Jump on Space key (only if grounded)
-    if (input.IsActionDown(Action::Jump) && physics.isGrounded && controller.canJump) {
-        physics.velocity.y = controller.jumpForce;
-    }
-}
-
 void PlayerMovementSystem::HandleMouseLook(Entity entity, TransformComponent& transform,
                                           PlayerControllerComponent& controller, 
                                           Input& input, float deltaTime) {
@@ -98,6 +89,39 @@ void PlayerMovementSystem::HandleMouseLook(Entity entity, TransformComponent& tr
     transform.rotation.z = 0.0f;
 
     // Note: CameraSystem will handle updating the camera view matrix based on this transform
+}
+
+void PlayerMovementSystem::OnEvent(Event& e)
+{
+    LOG_INFO("PlayerMovementSystem::OnEvent called. Event: " + e.ToString() + ", Type: " + std::to_string((int)e.GetEventType()));
+    EventDispatcher dispatcher(e);
+    dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& event) {
+        if (event.GetKeyCode() == VK_SPACE)
+        {
+            LOG_INFO("Space pressed in PlayerMovementSystem");
+            // Iterate over all player controller components
+            auto controllerArray = m_componentManager.GetComponentArray<PlayerControllerComponent>();
+            auto& controllerVec = controllerArray->GetComponentArray();
+
+            for (size_t i = 0; i < controllerVec.size(); ++i) {
+                Entity entity = controllerArray->GetEntityAtIndex(i);
+                PlayerControllerComponent& controller = controllerVec[i];
+
+                if (!m_componentManager.HasComponent<PhysicsComponent>(entity)) continue;
+                PhysicsComponent& physics = m_componentManager.GetComponent<PhysicsComponent>(entity);
+
+                LOG_INFO("Checking jump for entity %d. Grounded: %d, CanJump: %d", entity, physics.isGrounded, controller.canJump);
+
+                // Jump logic
+                if (physics.isGrounded && controller.canJump) {
+                    physics.velocity.y = controller.jumpForce;
+                    LOG_INFO("JUMP!");
+                }
+            }
+            return true;
+        }
+        return false;
+    });
 }
 
 } // namespace ECS

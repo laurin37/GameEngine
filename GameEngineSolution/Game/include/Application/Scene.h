@@ -15,6 +15,7 @@
 #include "Renderer/Renderer.h"
 #include "ECS/ComponentManager.h"
 #include "ECS/SystemManager.h"
+#include "Events/Event.h"
 
 // Forward declarations for Systems
 namespace ECS {
@@ -50,7 +51,7 @@ struct DirectionalLight;
 class Scene
 {
 public:
-    Scene(AssetManager* assetManager, Graphics* graphics, Input* input);
+    Scene(AssetManager* assetManager, Graphics* graphics, Input* input, class EventBus* eventBus);
     ~Scene();
 
     void Load();
@@ -82,6 +83,7 @@ public:
     AssetManager* m_assetManager;
     Graphics* m_graphics;
     Input* m_input;
+    EventBus* m_eventBus;
     // Cached system pointers for direct access
     ECS::PhysicsSystem* m_ecsPhysicsSystem = nullptr;
     ECS::RenderSystem* m_ecsRenderSystem = nullptr;

@@ -1,5 +1,7 @@
 #include "Application/Game.h"
 #include "Events/ApplicationEvents.h"
+#include "Events/InputEvents.h"
+#include "Utils/Logger.h"
 
 #include "ResourceManagement/AssetManager.h" 
 #include "UI/UIRenderer.h"
@@ -27,6 +29,8 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
     try
     {
         m_window.Initialize(hInstance, nCmdShow, L"MyGameDemo", L"MyGameDemoClass", WINDOW_WIDTH, WINDOW_HEIGHT);
+        m_window.SetEventBus(&m_eventBus);
+        
         m_graphics.Initialize(m_window.GetHWND(), WINDOW_WIDTH, WINDOW_HEIGHT);
         m_input.Initialize(m_window.GetHWND());
 
@@ -35,8 +39,11 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         m_renderer->Initialize(&m_graphics, m_assetManager.get(), WINDOW_WIDTH, WINDOW_HEIGHT);
         m_uiRenderer = std::make_unique<UIRenderer>(&m_graphics);
 
-        m_scene = std::make_unique<Scene>(m_assetManager.get(), &m_graphics, &m_input);
+        m_scene = std::make_unique<Scene>(m_assetManager.get(), &m_graphics, &m_input, &m_eventBus);
         m_scene->Load();
+        
+        // Subscribe to events via EventBus
+        SubscribeToEvents();
     }
     catch (const std::exception& e)
     {
@@ -75,45 +82,6 @@ void Game::Update(float deltaTime)
 {
     m_input.Update();
 
-    // Quit Action
-    if (m_input.IsActionDown(Action::Quit))
-    {
-        PostQuitMessage(0);
-    }
-
-    // Toggle bloom with B key
-    static bool bKeyWasPressed = false;
-    bool bKeyPressed = m_input.IsKeyDown('B');
-    if (bKeyPressed && !bKeyWasPressed)
-    {
-        m_renderer->GetPostProcess()->ToggleBloom();
-        bool isEnabled = m_renderer->GetPostProcess()->IsBloomEnabled();
-        LOG_INFO(isEnabled ? "Bloom: ON" : "Bloom: OFF");
-    }
-    bKeyWasPressed = bKeyPressed;
-
-    // Toggle debug collision with H key
-    static bool hKeyWasPressed = false;
-    bool hKeyPressed = m_input.IsKeyDown('H');
-    if (hKeyPressed && !hKeyWasPressed)
-    {
-        m_showDebugCollision = !m_showDebugCollision;
-        LOG_INFO(m_showDebugCollision ? "Debug Collision: ON" : "Debug Collision: OFF");
-    }
-    hKeyWasPressed = hKeyPressed;
-
-    // Toggle debug UI with F1 key
-    static bool f1KeyWasPressed = false;
-    bool f1KeyPressed = m_input.IsKeyDown(VK_F1);
-    if (f1KeyPressed && !f1KeyWasPressed)
-    {
-        if (m_scene) {
-            m_scene->ToggleDebugUI();
-            LOG_INFO(m_scene->IsDebugUIEnabled() ? "Debug UI: ON" : "Debug UI: OFF");
-        }
-    }
-    f1KeyWasPressed = f1KeyPressed;
-
     if (m_scene)
     {
         m_scene->Update(deltaTime);
@@ -130,25 +98,51 @@ void Game::Render()
     m_graphics.Present();
 }
 
-void Game::OnEvent(Event& e)
+void Game::SubscribeToEvents()
 {
-    // Dispatch events to specific handlers
-    EventDispatcher dispatcher(e);
-    
-    // Example: Handle Window Resize
-    dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
-        // Resize swap chain and buffers
+    // Subscribe to Window Resize events
+    m_eventBus.Subscribe(EventType::WindowResize, [this](Event& e) {
+        // WindowResizeEvent& event = static_cast<WindowResizeEvent&>(e);
         // m_graphics.Resize(event.GetWidth(), event.GetHeight()); // TODO: Implement Graphics::Resize
         // m_renderer->OnResize(event.GetWidth(), event.GetHeight()); // TODO: Implement Renderer::OnResize
-        return false;
     });
 
-    // Example: Handle Window Close
-    dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
+    // Subscribe to Window Close events
+    m_eventBus.Subscribe(EventType::WindowClose, [this](Event& e) {
         PostQuitMessage(0);
-        return true;
+        e.Handled = true;
     });
 
-    // Propagate event to Scene/Systems if not handled
-    // if (m_scene) m_scene->OnEvent(e);
+    // Subscribe to Key Pressed events
+    m_eventBus.Subscribe(EventType::KeyPressed, [this](Event& e) {
+        KeyPressedEvent& event = static_cast<KeyPressedEvent&>(e);
+        
+        // Skip key repeats (held keys generate repeatCount > 1)
+        if (event.GetRepeatCount() > 1) return;
+
+        switch (event.GetKeyCode())
+        {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            e.Handled = true;
+            break;
+        case 'B':
+            m_renderer->GetPostProcess()->ToggleBloom();
+            LOG_INFO(m_renderer->GetPostProcess()->IsBloomEnabled() ? "Bloom: ON" : "Bloom: OFF");
+            e.Handled = true;
+            break;
+        case 'H':
+            m_showDebugCollision = !m_showDebugCollision;
+            LOG_INFO(m_showDebugCollision ? "Debug Collision: ON" : "Debug Collision: OFF");
+            e.Handled = true;
+            break;
+        case VK_F1:
+            if (m_scene) {
+                m_scene->ToggleDebugUI();
+                LOG_INFO(m_scene->IsDebugUIEnabled() ? "Debug UI: ON" : "Debug UI: OFF");
+            }
+            e.Handled = true;
+            break;
+        }
+    });
 }
