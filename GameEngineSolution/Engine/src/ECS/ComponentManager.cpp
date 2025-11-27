@@ -2,11 +2,17 @@
 #include "../../include/Events/ECSEvents.h"
 #include "../../include/Events/EventBus.h"
 
+#include "../../include/Utils/Logger.h"
+
 namespace ECS {
 
 void ComponentManager::FireComponentAddedEvent(Entity entity, std::type_index componentType) {
-    if (!m_eventBus) return;
+    if (!m_eventBus) {
+        LOG_WARNING("ComponentManager: EventBus is null!");
+        return;
+    }
     
+    LOG_INFO("ComponentManager: Firing ComponentAdded for Entity " + std::to_string(entity.id));
     ComponentAddedEvent event(entity, componentType);
     m_eventBus->Publish(event);
 }

@@ -145,6 +145,103 @@ void SceneLoader::LoadScene(
     }
 }
 
+ECS::Entity SceneLoader::LoadPrefab(
+    const std::wstring& prefabPath,
+    ECS::ComponentManager& componentManager,
+    AssetManager* assetManager,
+    const DirectX::XMFLOAT3& position,
+    const DirectX::XMFLOAT3& rotation,
+    const DirectX::XMFLOAT3& scale
+) {
+    JsonValue root = JsonParser::ParseFile(prefabPath);
+    if (!root.IsObject()) {
+        throw std::runtime_error("Prefab JSON root must be an object");
+    }
+
+    std::unordered_map<std::string, Mesh*> meshLookup;
+    std::unordered_map<std::string, std::shared_ptr<Material>> materialLookup;
+
+    if (root.HasField("resources")) {
+        ParseResources(root.GetField("resources"), assetManager, meshLookup, materialLookup);
+    }
+
+    // Determine components object
+    const JsonValue* componentsPtr = &root;
+    if (root.HasField("components")) {
+        componentsPtr = &root.GetField("components");
+    }
+    const JsonValue& components = *componentsPtr;
+
+    ECS::EntityBuilder builder(componentManager);
+    Mesh* entityMesh = nullptr;
+
+    // Always use the passed transform arguments
+    ECS::TransformComponent transform;
+    transform.position = position;
+    transform.rotation = rotation;
+    transform.scale = scale;
+    builder.With(transform);
+
+    // Parse Render (must come before collider for auto-generation)
+    if (components.HasField("render")) {
+        ECS::RenderComponent render = ParseRender(components.GetField("render"), meshLookup, materialLookup);
+        builder.With(render);
+        entityMesh = render.mesh;
+    }
+    
+    // Parse Physics
+    if (components.HasField("physics")) {
+        builder.With(ParsePhysics(components.GetField("physics")));
+    }
+    
+    // Parse Collider
+    if (components.HasField("collider")) {
+        builder.With(ParseCollider(components.GetField("collider"), entityMesh));
+    }
+    
+    // Parse Light
+    if (components.HasField("light")) {
+        builder.With(ParseLight(components.GetField("light")));
+    }
+    
+    // Parse Rotate
+    if (components.HasField("rotate")) {
+        builder.With(ParseRotate(components.GetField("rotate")));
+    }
+    
+    // Parse Orbit
+    if (components.HasField("orbit")) {
+        builder.With(ParseOrbit(components.GetField("orbit")));
+    }
+    
+    // Parse PlayerController
+    if (components.HasField("playerController")) {
+        builder.With(ParsePlayerController(components.GetField("playerController")));
+    }
+
+    // Parse Camera
+    if (components.HasField("camera")) {
+        builder.With(ParseCamera(components.GetField("camera")));
+    }
+
+    // Parse Health
+    if (components.HasField("health")) {
+        builder.With(ParseHealth(components.GetField("health")));
+    }
+
+    // Parse Weapon
+    if (components.HasField("weapon")) {
+        builder.With(ParseWeapon(components.GetField("weapon")));
+    }
+
+    // Parse Projectile
+    if (components.HasField("projectile")) {
+        builder.With(ParseProjectile(components.GetField("projectile")));
+    }
+    
+    return builder.Build();
+}
+
 void SceneLoader::ParseResources(
     const JsonValue& resources,
     AssetManager* assetManager,

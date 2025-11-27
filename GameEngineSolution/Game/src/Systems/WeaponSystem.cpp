@@ -2,6 +2,7 @@
 #include "Systems/WeaponSystem.h"
 #include "UI/DebugUIRenderer.h"
 #include "Renderer/Mesh.h"
+#include "Utils/Logger.h"
 #include <iostream>
 #include <format>
 #include <cmath>
@@ -98,7 +99,7 @@ void WeaponSystem::FireProjectile(ECS::Entity entity, ECS::TransformComponent& t
     projComp.velocity = physics.velocity; // Redundant but used by ProjectileSystem
     m_componentManager.AddComponent(projectile, projComp);
 
-    // std::cout << "Fired Projectile!" << std::endl;
+    LOG_INFO("Fired Projectile! Entity: " + std::to_string(projectile.id) + " Mesh: " + (m_projectileMesh ? "Valid" : "NULL"));
 }
 
 void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, ECS::TransformComponent& transform) {

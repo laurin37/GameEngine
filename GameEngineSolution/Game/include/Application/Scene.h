@@ -67,15 +67,7 @@ public:
     bool IsDebugUIEnabled() const { return m_debugUI.IsEnabled(); }
 
 private:
-    void RebuildRenderCache();
-    void UpdateRenderCache();
-    void CreateRenderCacheEntry(ECS::Entity entity, const ECS::TransformComponent* transform, const ECS::RenderComponent* render);
-    void RemoveRenderCacheEntry(size_t index);
-    void RefreshRenderCacheEntry(size_t index, const ECS::TransformComponent* transform, const ECS::RenderComponent* render);
-    bool TryComputeWorldBounds(ECS::Entity entity, const ECS::TransformComponent* transform, Renderer::RenderInstance& instance);
-
     // Render helpers
-    void GatherLights(std::vector<PointLight>& outLights);
     bool SetupCamera(Camera& outCamera, DirectX::XMMATRIX& outView, DirectX::XMMATRIX& outProj);
     void RenderUI(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCollision);
 
@@ -97,18 +89,6 @@ public:
 
     // Event subscriptions
     std::vector<EventBus::SubscriptionId> m_eventSubscriptions;
-
-    struct RenderCacheEntry
-    {
-        ECS::Entity entity = ECS::NULL_ENTITY;
-        Renderer::RenderInstance instance{};
-        DirectX::XMFLOAT3 lastPosition{ 0.0f,0.0f,0.0f };
-        DirectX::XMFLOAT3 lastRotation{ 0.0f,0.0f,0.0f };
-        DirectX::XMFLOAT3 lastScale{ 1.0f,1.0f,1.0f };
-    };
-
-    std::vector<RenderCacheEntry> m_renderCache;
-    std::unordered_map<ECS::Entity, size_t> m_entityToRenderCacheIndex;
 
     DirectionalLight m_dirLight;
     DebugUIRenderer m_debugUI;

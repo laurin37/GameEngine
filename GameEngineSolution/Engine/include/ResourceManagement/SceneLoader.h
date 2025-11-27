@@ -44,6 +44,16 @@ public:
         AssetManager* assetManager
     );
 
+    // Load a single entity from a prefab JSON file
+    static ECS::Entity LoadPrefab(
+        const std::wstring& prefabPath,
+        ECS::ComponentManager& componentManager,
+        AssetManager* assetManager,
+        const DirectX::XMFLOAT3& position = { 0.0f, 0.0f, 0.0f },
+        const DirectX::XMFLOAT3& rotation = { 0.0f, 0.0f, 0.0f },
+        const DirectX::XMFLOAT3& scale = { 1.0f, 1.0f, 1.0f }
+    );
+
 private:
     // Parse resources section (meshes, materials)
     static void ParseResources(

@@ -39,6 +39,7 @@ Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input, Event
     
     // Set EventBus for SystemManager so it's passed to all new systems automatically
     m_systemManager.SetEventBus(m_eventBus);
+    m_ecsComponentManager.SetEventBus(m_eventBus);
     
     // 1. Core Systems
     m_ecsPhysicsSystem = m_systemManager.AddSystem<ECS::PhysicsSystem>(m_ecsComponentManager);
@@ -75,57 +76,6 @@ Scene::~Scene()
 void Scene::Load()
 {
     // ========================================
-    // 1. Register all component types (MUST be done before creating entities!)
-    // ========================================
-    m_ecsComponentManager.RegisterComponent<ECS::TransformComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::PhysicsComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::RenderComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::ColliderComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::LightComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::PlayerControllerComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::CameraComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::HealthComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::WeaponComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::ProjectileComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::RotateComponent>();
-    m_ecsComponentManager.RegisterComponent<ECS::OrbitComponent>();
-    
-    // ========================================
-    // 2. Connect EventBus to ComponentManager for component lifecycle events
-    // ========================================
-    m_ecsComponentManager.SetEventBus(m_eventBus);
-    
-    // ========================================
-    // 3. Subscribe to component events for automatic render cache updates
-    // ========================================
-    if (m_eventBus) {
-        // Rebuild render cache when render/transform components are added
-        m_eventSubscriptions.push_back(
-            m_eventBus->Subscribe(EventType::ComponentAdded, [this](Event& e) {
-                auto& event = static_cast<ComponentAddedEvent&>(e);
-                
-                if (event.componentType == typeid(ECS::RenderComponent) ||
-                    event.componentType == typeid(ECS::TransformComponent)) {
-                    RebuildRenderCache();
-                }
-            })
-        );
-        
-        // Rebuild render cache when render components are removed
-        m_eventSubscriptions.push_back(
-            m_eventBus->Subscribe(EventType::ComponentRemoved, [this](Event& e) {
-                auto& event = static_cast<ComponentRemovedEvent&>(e);
-                
-                if (event.componentType == typeid(ECS::RenderComponent)) {
-                    RebuildRenderCache();
-                }
-            })
-        );
-    }
-    
-    // ========================================
-    // 4. Load scene from JSON
-    // ========================================
     LoadSceneFromJSON(Config::Paths::DefaultScene);
 
     // Load Font
@@ -155,7 +105,10 @@ void Scene::Load()
         m_weaponSystem->SetProjectileAssets(sphereMesh.get(), projectileMat);
     }
 
-    RebuildRenderCache();
+    // Force rebuild of render cache to ensure all loaded entities are visible
+    if (m_ecsRenderSystem) {
+        m_ecsRenderSystem->RebuildRenderCache();
+    }
 }
 
 void Scene::LoadSceneFromJSON(const std::wstring& jsonPath) {
@@ -183,27 +136,14 @@ void Scene::Update(float deltaTime)
 void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCollision)
 {
     if (!renderer || !uiRenderer) return;
-
-    UpdateRenderCache();
-
-    std::vector<const Renderer::RenderInstance*> renderInstanceViews;
-    renderInstanceViews.reserve(m_renderCache.size());
-    for (auto& entry : m_renderCache)
-    {
-        renderInstanceViews.push_back(&entry.instance);
-    }
-    
-    // Gather ECS lights
-    std::vector<PointLight> ecsLights;
-    GatherLights(ecsLights);
     
     // Get ECS camera and create temporary Camera adapter for renderer
     DirectX::XMMATRIX ecsView, ecsProj;
     Camera tempCamera;  // Temporary adapter
     
     if (SetupCamera(tempCamera, ecsView, ecsProj)) {
-        // Render scene
-        renderer->RenderFrame(tempCamera, renderInstanceViews, m_dirLight, ecsLights);
+        // Render scene via ECS System
+        m_ecsRenderSystem->Render(renderer, tempCamera, m_dirLight);
         
         // Render debug collision boxes
         if (showDebugCollision) {
@@ -215,187 +155,7 @@ void Scene::Render(Renderer* renderer, UIRenderer* uiRenderer, bool showDebugCol
     RenderUI(renderer, uiRenderer, showDebugCollision);
 }
 
-void Scene::RebuildRenderCache()
-{
-    m_renderCache.clear();
-    m_entityToRenderCacheIndex.clear();
 
-    auto renderArray = m_ecsComponentManager.GetComponentArray<ECS::RenderComponent>();
-    auto& renderVec = renderArray->GetComponentArray();
-    
-    m_renderCache.reserve(renderVec.size());
-
-    for (size_t i = 0; i < renderVec.size(); ++i) {
-        ECS::Entity entity = renderArray->GetEntityAtIndex(i);
-        ECS::RenderComponent& render = renderVec[i];
-        
-        if (!render.mesh || !render.material) continue;
-        
-        if (!m_ecsComponentManager.HasComponent<ECS::TransformComponent>(entity)) continue;
-        ECS::TransformComponent& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(entity);
-        
-        CreateRenderCacheEntry(entity, &transform, &render);
-    }
-}
-
-void Scene::UpdateRenderCache()
-{
-    for (size_t i = 0; i < m_renderCache.size();)
-    {
-        ECS::Entity entity = m_renderCache[i].entity;
-        
-        // Check if components still exist
-        if (!m_ecsComponentManager.HasComponent<ECS::TransformComponent>(entity) ||
-            !m_ecsComponentManager.HasComponent<ECS::RenderComponent>(entity))
-        {
-            RemoveRenderCacheEntry(i);
-            continue;
-        }
-        
-        auto& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(entity);
-        auto& render = m_ecsComponentManager.GetComponent<ECS::RenderComponent>(entity);
-
-        if (!render.mesh || !render.material)
-        {
-            RemoveRenderCacheEntry(i);
-            continue;
-        }
-
-        bool transformChanged =
-            transform.position.x != m_renderCache[i].lastPosition.x ||
-            transform.position.y != m_renderCache[i].lastPosition.y ||
-            transform.position.z != m_renderCache[i].lastPosition.z ||
-            transform.rotation.x != m_renderCache[i].lastRotation.x ||
-            transform.rotation.y != m_renderCache[i].lastRotation.y ||
-            transform.rotation.z != m_renderCache[i].lastRotation.z ||
-            transform.scale.x != m_renderCache[i].lastScale.x ||
-            transform.scale.y != m_renderCache[i].lastScale.y ||
-            transform.scale.z != m_renderCache[i].lastScale.z;
-
-        bool renderChanged =
-            render.mesh != m_renderCache[i].instance.mesh ||
-            render.material.get() != m_renderCache[i].instance.material;
-
-        if (transformChanged || renderChanged)
-        {
-            RefreshRenderCacheEntry(i, &transform, &render);
-        }
-
-        ++i;
-    }
-    
-    // NOTE: No need to check for new entities manually!
-    // Component events (ComponentAddedEvent) trigger RebuildRenderCache() automatically.
-    // This eliminates the O(n) polling loop that was here before.
-}
-
-void Scene::RemoveRenderCacheEntry(size_t index)
-{
-    if (index >= m_renderCache.size()) return;
-
-    ECS::Entity entity = m_renderCache[index].entity;
-    m_entityToRenderCacheIndex.erase(entity);
-
-    size_t lastIndex = m_renderCache.size() - 1;
-    if (index != lastIndex)
-    {
-        std::swap(m_renderCache[index], m_renderCache[lastIndex]);
-        m_entityToRenderCacheIndex[m_renderCache[index].entity] = index;
-    }
-
-    m_renderCache.pop_back();
-}
-
-void Scene::RefreshRenderCacheEntry(size_t index, const ECS::TransformComponent* transform, const ECS::RenderComponent* render)
-{
-    auto& entry = m_renderCache[index];
-    entry.instance.mesh = render->mesh;
-    entry.instance.material = render->material.get();
-    entry.instance.position = transform->position;
-    entry.instance.rotation = transform->rotation;
-    entry.instance.scale = transform->scale;
-    entry.instance.hasBounds = TryComputeWorldBounds(entry.entity, transform, entry.instance);
-
-    entry.lastPosition = transform->position;
-    entry.lastRotation = transform->rotation;
-    entry.lastScale = transform->scale;
-}
-
-void Scene::CreateRenderCacheEntry(ECS::Entity entity, const ECS::TransformComponent* transform, const ECS::RenderComponent* render)
-{
-    RenderCacheEntry entry;
-    entry.entity = entity;
-    entry.instance.mesh = render->mesh;
-    entry.instance.material = render->material.get();
-    entry.instance.position = transform->position;
-    entry.instance.rotation = transform->rotation;
-    entry.instance.scale = transform->scale;
-    entry.instance.hasBounds = TryComputeWorldBounds(entity, transform, entry.instance);
-    entry.lastPosition = transform->position;
-    entry.lastRotation = transform->rotation;
-    entry.lastScale = transform->scale;
-
-    m_entityToRenderCacheIndex[entity] = m_renderCache.size();
-    m_renderCache.push_back(entry);
-}
-
-bool Scene::TryComputeWorldBounds(ECS::Entity entity, const ECS::TransformComponent* transform, Renderer::RenderInstance& instance)
-{
-    if (!transform) return false;
-
-    auto computeFromLocal = [&](const AABB& localBounds)
-    {
-        instance.worldAABB.extents.x = std::abs(transform->scale.x) * localBounds.extents.x;
-        instance.worldAABB.extents.y = std::abs(transform->scale.y) * localBounds.extents.y;
-        instance.worldAABB.extents.z = std::abs(transform->scale.z) * localBounds.extents.z;
-
-        instance.worldAABB.center.x = transform->position.x + transform->scale.x * localBounds.center.x;
-        instance.worldAABB.center.y = transform->position.y + transform->scale.y * localBounds.center.y;
-        instance.worldAABB.center.z = transform->position.z + transform->scale.z * localBounds.center.z;
-    };
-
-    if (m_ecsComponentManager.HasComponent<ECS::ColliderComponent>(entity))
-    {
-        auto& collider = m_ecsComponentManager.GetComponent<ECS::ColliderComponent>(entity);
-        if (collider.enabled) {
-            computeFromLocal(collider.localAABB);
-            return true;
-        }
-    }
-
-    if (m_ecsComponentManager.HasComponent<ECS::RenderComponent>(entity))
-    {
-        auto& render = m_ecsComponentManager.GetComponent<ECS::RenderComponent>(entity);
-        if (render.mesh) {
-            computeFromLocal(render.mesh->GetLocalBounds());
-            return true;
-        }
-    }
-
-    return false;
-}
-
-void Scene::GatherLights(std::vector<PointLight>& outLights)
-{
-    // Use Query API to get all entities with both LightComponent and TransformComponent
-    std::vector<ECS::Entity> lightEntities = 
-        m_ecsComponentManager.QueryEntities<ECS::LightComponent, ECS::TransformComponent>();
-    
-    for (ECS::Entity entity : lightEntities) {
-        // Guaranteed to have both components!
-        ECS::LightComponent& light = m_ecsComponentManager.GetComponent<ECS::LightComponent>(entity);
-        ECS::TransformComponent& transform = m_ecsComponentManager.GetComponent<ECS::TransformComponent>(entity);
-        
-        if (!light.enabled) continue;
-        
-        PointLight pl;
-        pl.position = DirectX::XMFLOAT4(transform.position.x, transform.position.y, transform.position.z, light.range);
-        pl.color = light.color;
-        // Default attenuation (Constant, Linear, Quadratic)
-        pl.attenuation = DirectX::XMFLOAT4(1.0f, 0.09f, 0.032f, 0.0f); 
-        outLights.push_back(pl);
-    }
-}
 
 bool Scene::SetupCamera(Camera& outCamera, DirectX::XMMATRIX& outView, DirectX::XMMATRIX& outProj)
 {
