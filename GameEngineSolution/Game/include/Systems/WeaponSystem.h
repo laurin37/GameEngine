@@ -4,6 +4,8 @@
 #include "ECS/System.h"
 #include "Input/Input.h"
 
+namespace ECS { class PhysicsSystem; }
+
 class WeaponSystem : public ECS::System {
 public:
     WeaponSystem(ECS::ComponentManager& cm, Input& input) 
@@ -14,10 +16,15 @@ public:
         m_projectileMaterial = material;
     }
 
+    void SetPhysicsSystem(ECS::PhysicsSystem* physicsSystem) {
+        m_physicsSystem = physicsSystem;
+    }
+
     void Update(float deltaTime) override;
 
 private:
     Input& m_input;
+    ECS::PhysicsSystem* m_physicsSystem = nullptr;
     Mesh* m_projectileMesh = nullptr;
     std::shared_ptr<Material> m_projectileMaterial = nullptr;
 

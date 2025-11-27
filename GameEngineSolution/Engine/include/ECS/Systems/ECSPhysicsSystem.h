@@ -21,7 +21,7 @@ namespace ECS {
 // ==================================================================================
 class PhysicsSystem : public System {
 public:
-    explicit PhysicsSystem(ComponentManager& cm) : System(cm) {}
+    explicit PhysicsSystem(ComponentManager& cm) : System(cm), m_spatialGrid(10.0f) {}
     
     // Lifecycle
     void Init() override;
@@ -30,6 +30,9 @@ public:
     // Phase and parallelization
     SystemPhase GetPhase() const override { return SystemPhase::PostUpdate; }
     bool CanParallelize() const override { return false; } // Writes to transforms
+    
+    // Expose spatial grid for other systems
+    const Physics::SpatialGrid& GetSpatialGrid() const { return m_spatialGrid; }
     
 private:
     // Physics sub-steps
@@ -48,7 +51,7 @@ private:
     std::shared_ptr<ComponentArray<ColliderComponent>> m_colliderArray;
     
     // Spatial partitioning for collision
-    SpatialGrid m_spatialGrid;
+    Physics::SpatialGrid m_spatialGrid;
     
     // Physics constants
     static constexpr float MIN_DELTA_TIME = 0.0001f;

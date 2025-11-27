@@ -50,6 +50,7 @@ Scene::Scene(AssetManager* assetManager, Graphics* graphics, Input* input, Event
     if (m_input) {
         m_ecsPlayerMovementSystem = m_systemManager.AddSystem<ECS::PlayerMovementSystem>(m_ecsComponentManager, *m_input);
         m_weaponSystem = m_systemManager.AddSystem<WeaponSystem>(m_ecsComponentManager, *m_input);
+        m_weaponSystem->SetPhysicsSystem(m_ecsPhysicsSystem);
     }
     m_projectileSystem = m_systemManager.AddSystem<ProjectileSystem>(m_ecsComponentManager);
     m_healthSystem = m_systemManager.AddSystem<HealthSystem>(m_ecsComponentManager);

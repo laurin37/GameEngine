@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "Systems/WeaponSystem.h"
+#include "ECS/Systems/ECSPhysicsSystem.h"
 #include "UI/DebugUIRenderer.h"
 #include "Renderer/Mesh.h"
 #include "Utils/Logger.h"
@@ -138,44 +139,83 @@ void WeaponSystem::FireWeapon(ECS::Entity entity, ECS::WeaponComponent& weapon, 
     rayDir.z /= length;
 
     // Raycast against all entities with Health and Collider
-    // This is a naive O(N) raycast. In a real engine, use a spatial partition (Octree/BVH).
+    // Optimized with Spatial Partitioning if available
     
     ECS::Entity hitEntity = ECS::NULL_ENTITY;
     float minDistance = weapon.range;
 
-    // Iterate over ColliderComponent array (Walls, Props, etc.)
-    auto colliderArray = m_componentManager.GetComponentArray<ECS::ColliderComponent>();
-    for (size_t i = 0; i < colliderArray->GetSize(); ++i) {
-        ECS::Entity targetEntity = colliderArray->GetEntityAtIndex(i);
-        if (targetEntity == entity) continue; // Don't hit self
+    if (m_physicsSystem) {
+        // Broadphase: Get candidates from grid
+        const auto& grid = m_physicsSystem->GetSpatialGrid();
+        std::vector<ECS::Entity> candidates = grid.Raycast(rayOrigin, rayDir, weapon.range);
 
-        if (!m_componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
-        auto& targetTransform = m_componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
-        auto& collider = colliderArray->GetData(targetEntity);
-        
-        if (!collider.enabled) continue;
+        // Narrowphase: Check candidates
+        for (ECS::Entity targetEntity : candidates) {
+            if (targetEntity == entity) continue;
 
-        // Calculate World AABB (Axis Aligned approximation)
-        DirectX::XMFLOAT3 minBox, maxBox;
-        
-        // Center in world space
-        float cx = targetTransform.position.x + collider.localAABB.center.x * targetTransform.scale.x;
-        float cy = targetTransform.position.y + collider.localAABB.center.y * targetTransform.scale.y;
-        float cz = targetTransform.position.z + collider.localAABB.center.z * targetTransform.scale.z;
-        
-        // Extents in world space (abs scale to handle negative scale)
-        float ex = collider.localAABB.extents.x * std::abs(targetTransform.scale.x);
-        float ey = collider.localAABB.extents.y * std::abs(targetTransform.scale.y);
-        float ez = collider.localAABB.extents.z * std::abs(targetTransform.scale.z);
+            if (!m_componentManager.HasComponent<ECS::ColliderComponent>(targetEntity)) continue;
+            if (!m_componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
 
-        minBox = { cx - ex, cy - ey, cz - ez };
-        maxBox = { cx + ex, cy + ey, cz + ez };
+            auto& targetTransform = m_componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
+            auto& collider = m_componentManager.GetComponent<ECS::ColliderComponent>(targetEntity);
+            
+            if (!collider.enabled) continue;
 
-        float t = 0.0f;
-        if (RayAABBIntersect(rayOrigin, rayDir, minBox, maxBox, t)) {
-            if (t < minDistance) {
-                minDistance = t;
-                hitEntity = targetEntity;
+            // Calculate World AABB
+            DirectX::XMFLOAT3 minBox, maxBox;
+            
+            float cx = targetTransform.position.x + collider.localAABB.center.x * targetTransform.scale.x;
+            float cy = targetTransform.position.y + collider.localAABB.center.y * targetTransform.scale.y;
+            float cz = targetTransform.position.z + collider.localAABB.center.z * targetTransform.scale.z;
+            
+            float ex = collider.localAABB.extents.x * std::abs(targetTransform.scale.x);
+            float ey = collider.localAABB.extents.y * std::abs(targetTransform.scale.y);
+            float ez = collider.localAABB.extents.z * std::abs(targetTransform.scale.z);
+
+            minBox = { cx - ex, cy - ey, cz - ez };
+            maxBox = { cx + ex, cy + ey, cz + ez };
+
+            float t = 0.0f;
+            if (RayAABBIntersect(rayOrigin, rayDir, minBox, maxBox, t)) {
+                if (t < minDistance) {
+                    minDistance = t;
+                    hitEntity = targetEntity;
+                }
+            }
+        }
+    } else {
+        // Fallback: O(N) Iteration over ColliderComponent array
+        auto colliderArray = m_componentManager.GetComponentArray<ECS::ColliderComponent>();
+        for (size_t i = 0; i < colliderArray->GetSize(); ++i) {
+            ECS::Entity targetEntity = colliderArray->GetEntityAtIndex(i);
+            if (targetEntity == entity) continue;
+
+            if (!m_componentManager.HasComponent<ECS::TransformComponent>(targetEntity)) continue;
+            auto& targetTransform = m_componentManager.GetComponent<ECS::TransformComponent>(targetEntity);
+            auto& collider = colliderArray->GetData(targetEntity);
+            
+            if (!collider.enabled) continue;
+
+            // Calculate World AABB
+            DirectX::XMFLOAT3 minBox, maxBox;
+            
+            float cx = targetTransform.position.x + collider.localAABB.center.x * targetTransform.scale.x;
+            float cy = targetTransform.position.y + collider.localAABB.center.y * targetTransform.scale.y;
+            float cz = targetTransform.position.z + collider.localAABB.center.z * targetTransform.scale.z;
+            
+            float ex = collider.localAABB.extents.x * std::abs(targetTransform.scale.x);
+            float ey = collider.localAABB.extents.y * std::abs(targetTransform.scale.y);
+            float ez = collider.localAABB.extents.z * std::abs(targetTransform.scale.z);
+
+            minBox = { cx - ex, cy - ey, cz - ez };
+            maxBox = { cx + ex, cy + ey, cz + ez };
+
+            float t = 0.0f;
+            if (RayAABBIntersect(rayOrigin, rayDir, minBox, maxBox, t)) {
+                if (t < minDistance) {
+                    minDistance = t;
+                    hitEntity = targetEntity;
+                }
             }
         }
     }
