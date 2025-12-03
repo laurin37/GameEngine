@@ -35,6 +35,11 @@ void ImmediateGUI::EndFrame()
     if (!m_state.mouseDown)
     {
         m_state.activeItem = 0;
+        if (m_captureItem != 0)
+        {
+            // Release capture if mouse released? Or let widget decide?
+            // For buttons, yes. For sliders, maybe not until release.
+        }
     }
 }
 
@@ -43,8 +48,8 @@ void ImmediateGUI::Begin(const std::string& title, float x, float y, float width
     m_state.windowX = x;
     m_state.windowY = y;
     m_state.windowWidth = width;
-    m_state.cursorX = x + PADDING;
-    m_state.cursorY = y + PADDING + 20.0f; // Title bar height
+    m_state.cursorX = x + m_style.WindowPadding;
+    m_state.cursorY = y + m_style.WindowPadding + 20.0f; // Title bar height
     m_state.sameLine = false;
 
     // Draw Window Background
@@ -52,13 +57,15 @@ void ImmediateGUI::Begin(const std::string& title, float x, float y, float width
     float x2 = x + width;
     float y2 = y + height;
     
+    const float* bgCol = m_style.Colors[0]; // WindowBg
+
     // Quad for background
-    bgVertices[0] = { {x, y, 0}, {0,0}, {WINDOW_BG_COLOR[0], WINDOW_BG_COLOR[1], WINDOW_BG_COLOR[2], WINDOW_BG_COLOR[3]} };
-    bgVertices[1] = { {x2, y, 0}, {1,0}, {WINDOW_BG_COLOR[0], WINDOW_BG_COLOR[1], WINDOW_BG_COLOR[2], WINDOW_BG_COLOR[3]} };
-    bgVertices[2] = { {x, y2, 0}, {0,1}, {WINDOW_BG_COLOR[0], WINDOW_BG_COLOR[1], WINDOW_BG_COLOR[2], WINDOW_BG_COLOR[3]} };
-    bgVertices[3] = { {x, y2, 0}, {0,1}, {WINDOW_BG_COLOR[0], WINDOW_BG_COLOR[1], WINDOW_BG_COLOR[2], WINDOW_BG_COLOR[3]} };
-    bgVertices[4] = { {x2, y, 0}, {1,0}, {WINDOW_BG_COLOR[0], WINDOW_BG_COLOR[1], WINDOW_BG_COLOR[2], WINDOW_BG_COLOR[3]} };
-    bgVertices[5] = { {x2, y2, 0}, {1,1}, {WINDOW_BG_COLOR[0], WINDOW_BG_COLOR[1], WINDOW_BG_COLOR[2], WINDOW_BG_COLOR[3]} };
+    bgVertices[0] = { {x, y, 0}, {0,0}, {bgCol[0], bgCol[1], bgCol[2], bgCol[3]} };
+    bgVertices[1] = { {x2, y, 0}, {1,0}, {bgCol[0], bgCol[1], bgCol[2], bgCol[3]} };
+    bgVertices[2] = { {x, y2, 0}, {0,1}, {bgCol[0], bgCol[1], bgCol[2], bgCol[3]} };
+    bgVertices[3] = { {x, y2, 0}, {0,1}, {bgCol[0], bgCol[1], bgCol[2], bgCol[3]} };
+    bgVertices[4] = { {x2, y, 0}, {1,0}, {bgCol[0], bgCol[1], bgCol[2], bgCol[3]} };
+    bgVertices[5] = { {x2, y2, 0}, {1,1}, {bgCol[0], bgCol[1], bgCol[2], bgCol[3]} };
     
     m_uiRenderer->DrawSprite(bgVertices, 6, m_assetManager->GetWhiteTexture().Get());
 
@@ -67,25 +74,30 @@ void ImmediateGUI::Begin(const std::string& title, float x, float y, float width
     SpriteVertex titleVertices[6];
     float ty2 = y + titleHeight;
     
-    titleVertices[0] = { {x, y, 0}, {0,0}, {TITLE_BG_COLOR[0], TITLE_BG_COLOR[1], TITLE_BG_COLOR[2], TITLE_BG_COLOR[3]} };
-    titleVertices[1] = { {x2, y, 0}, {1,0}, {TITLE_BG_COLOR[0], TITLE_BG_COLOR[1], TITLE_BG_COLOR[2], TITLE_BG_COLOR[3]} };
-    titleVertices[2] = { {x, ty2, 0}, {0,1}, {TITLE_BG_COLOR[0], TITLE_BG_COLOR[1], TITLE_BG_COLOR[2], TITLE_BG_COLOR[3]} };
-    titleVertices[3] = { {x, ty2, 0}, {0,1}, {TITLE_BG_COLOR[0], TITLE_BG_COLOR[1], TITLE_BG_COLOR[2], TITLE_BG_COLOR[3]} };
-    titleVertices[4] = { {x2, y, 0}, {1,0}, {TITLE_BG_COLOR[0], TITLE_BG_COLOR[1], TITLE_BG_COLOR[2], TITLE_BG_COLOR[3]} };
-    titleVertices[5] = { {x2, ty2, 0}, {1,1}, {TITLE_BG_COLOR[0], TITLE_BG_COLOR[1], TITLE_BG_COLOR[2], TITLE_BG_COLOR[3]} };
+    const float* titleCol = m_style.Colors[1]; // TitleBg
+
+    titleVertices[0] = { {x, y, 0}, {0,0}, {titleCol[0], titleCol[1], titleCol[2], titleCol[3]} };
+    titleVertices[1] = { {x2, y, 0}, {1,0}, {titleCol[0], titleCol[1], titleCol[2], titleCol[3]} };
+    titleVertices[2] = { {x, ty2, 0}, {0,1}, {titleCol[0], titleCol[1], titleCol[2], titleCol[3]} };
+    titleVertices[3] = { {x, ty2, 0}, {0,1}, {titleCol[0], titleCol[1], titleCol[2], titleCol[3]} };
+    titleVertices[4] = { {x2, y, 0}, {1,0}, {titleCol[0], titleCol[1], titleCol[2], titleCol[3]} };
+    titleVertices[5] = { {x2, ty2, 0}, {1,1}, {titleCol[0], titleCol[1], titleCol[2], titleCol[3]} };
     
     m_uiRenderer->DrawSprite(titleVertices, 6, m_assetManager->GetWhiteTexture().Get());
 
     // Draw Title Text
     if (m_font)
     {
-        m_uiRenderer->DrawString(*m_font, title, x + PADDING, y + 2.0f, 0.5f, TEXT_COLOR);
+        m_uiRenderer->DrawString(*m_font, title, x + m_style.WindowPadding, y + 2.0f, 0.5f, m_style.Colors[2]);
     }
+
+    // Clip content to window body (excluding title bar)
+    PushClipRect(x, y + titleHeight, width, height - titleHeight);
 }
 
 void ImmediateGUI::End()
 {
-    // Nothing to do for now
+    PopClipRect();
 }
 
 void ImmediateGUI::SameLine()
@@ -97,7 +109,7 @@ void ImmediateGUI::Label(const std::string& text)
 {
     if (m_font)
     {
-        m_uiRenderer->DrawString(*m_font, text, m_state.cursorX, m_state.cursorY, 0.4f, TEXT_COLOR);
+        m_uiRenderer->DrawString(*m_font, text, m_state.cursorX, m_state.cursorY, 0.4f, m_style.Colors[2]);
     }
     
     m_state.cursorY += ELEMENT_HEIGHT;
@@ -109,26 +121,22 @@ bool ImmediateGUI::Button(const std::string& text)
     
     float x = m_state.cursorX;
     float y = m_state.cursorY;
-    float w = m_state.windowWidth - (2 * PADDING); // Full width by default
+    float w = m_state.windowWidth - (2 * m_style.WindowPadding); // Full width by default
     float h = ELEMENT_HEIGHT - 5.0f;
     
-    // Handle SameLine (simplified)
     // Handle SameLine
     if (m_state.sameLine)
     {
-        x = m_state.cursorX + PADDING; // Add padding from previous element
+        x = m_state.cursorX + m_style.WindowPadding; // Add padding from previous element
         y = m_state.cursorY - ELEMENT_HEIGHT; // Stay on same line (undo Y advance)
-        w = (m_state.windowWidth - (3 * PADDING)) * 0.5f; // Half width for now (simple 2-column support)
-        
-        // Update cursor X for next element (if we supported >2 columns)
-        // m_state.cursorX = x + w; 
+        w = (m_state.windowWidth - (3 * m_style.WindowPadding)) * 0.5f; // Half width for now
         
         m_state.sameLine = false;
     }
     else
     {
         // Reset X to start of line
-        x = m_state.windowX + PADDING;
+        x = m_state.windowX + m_style.WindowPadding;
     }
 
     // Update state cursor for drawing
@@ -146,10 +154,19 @@ bool ImmediateGUI::Button(const std::string& text)
     }
 
     // Render Button Background
-    const float* color = BUTTON_COLOR;
+    const float* color = m_style.Colors[3]; // Button Color
     if (m_state.hotItem == id)
     {
-        color = (m_state.activeItem == id) ? BUTTON_ACTIVE_COLOR : BUTTON_HOT_COLOR;
+        // Simple lighten/darken for hover/active could be added here
+        // For now, just use same color or maybe hardcode a slight variation
+        if (m_state.activeItem == id) 
+        {
+             // Active
+        }
+        else 
+        {
+             // Hover
+        }
     }
 
     SpriteVertex vertices[6];
@@ -175,15 +192,15 @@ bool ImmediateGUI::Button(const std::string& text)
         
         if (textX < x) textX = x;
         
-        m_uiRenderer->DrawString(*m_font, text, textX, textY, 0.4f, TEXT_COLOR);
+        m_uiRenderer->DrawString(*m_font, text, textX, textY, 0.4f, m_style.Colors[2]);
     }
 
     // Advance cursor
     if (!m_state.sameLine) {
         m_state.cursorY += ELEMENT_HEIGHT;
-        m_state.cursorX = m_state.windowX + PADDING; // Reset X
+        m_state.cursorX = m_state.windowX + m_style.WindowPadding; // Reset X
     } else {
-        m_state.cursorX += w + PADDING;
+        m_state.cursorX += w + m_style.WindowPadding;
     }
 
     // Click logic
@@ -204,4 +221,24 @@ bool ImmediateGUI::RegionHit(float x, float y, float w, float h)
 int ImmediateGUI::GetWidgetID()
 {
     return ++m_widgetCounter;
+}
+
+void ImmediateGUI::SetCapture(int widgetID)
+{
+    m_captureItem = widgetID;
+}
+
+void ImmediateGUI::ReleaseCapture()
+{
+    m_captureItem = 0;
+}
+
+void ImmediateGUI::PushClipRect(float x, float y, float width, float height)
+{
+    m_uiRenderer->SetScissorRect(x, y, width, height);
+}
+
+void ImmediateGUI::PopClipRect()
+{
+    m_uiRenderer->SetScissorRect(0, 0, 0, 0); // Disable scissor
 }

@@ -48,6 +48,15 @@ public:
     // Styling
     void SetFont(const SimpleFont* font) { m_font = font; }
 
+    // Advanced Features
+    void PushClipRect(float x, float y, float width, float height);
+    void PopClipRect();
+    
+    // Input Capture
+    void SetCapture(int widgetID);
+    void ReleaseCapture();
+    int GetCaptureID() const { return m_captureItem; }
+
 private:
     struct UIState
     {
@@ -67,6 +76,23 @@ private:
         bool sameLine = false;
     };
 
+    // Styling
+    struct UIStyle
+    {
+        float WindowPadding = 10.0f;
+        float ItemSpacing = 5.0f;
+        float Colors[4][4] = {
+            {0.2f, 0.2f, 0.2f, 0.9f}, // WindowBg
+            {0.3f, 0.3f, 0.3f, 1.0f}, // TitleBg
+            {1.0f, 1.0f, 1.0f, 1.0f}, // Text
+            {0.4f, 0.4f, 0.4f, 1.0f}  // Button
+        };
+        // Add more colors as needed (Hover, Active, etc.)
+    };
+    
+    UIStyle& GetStyle() { return m_style; }
+
+private:
     // Helpers
     bool RegionHit(float x, float y, float w, float h);
     int GetWidgetID(); // Generate unique ID based on call order/hash
@@ -76,16 +102,31 @@ private:
     AssetManager* m_assetManager;
     const SimpleFont* m_font = nullptr;
 
-    UIState m_state;
+    struct State
+    {
+        float mouseX, mouseY;
+        bool mouseDown;
+        
+        int hotItem;
+        int activeItem;
+        
+        float cursorX, cursorY;
+        float windowX, windowY;
+        float windowWidth;
+        bool sameLine;
+    } m_state;
+
     int m_widgetCounter = 0; // Reset every frame
+    int m_captureItem = 0; // Item that has captured input
+    UIStyle m_style;
     
-    // Style constants
-    const float PADDING = 8.0f;
+    // Hardcoded constants removed in favor of Style
+    // const float PADDING = 8.0f;
     const float ELEMENT_HEIGHT = 30.0f;
-    const float BUTTON_COLOR[4] = { 0.3f, 0.3f, 0.3f, 1.0f };
-    const float BUTTON_HOT_COLOR[4] = { 0.4f, 0.4f, 0.4f, 1.0f };
-    const float BUTTON_ACTIVE_COLOR[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
-    const float TEXT_COLOR[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    const float WINDOW_BG_COLOR[4] = { 0.1f, 0.1f, 0.1f, 0.9f };
-    const float TITLE_BG_COLOR[4] = { 0.0f, 0.4f, 0.8f, 1.0f };
+    // const float BUTTON_COLOR[4] = { 0.3f, 0.3f, 0.3f, 1.0f };
+    // const float BUTTON_HOT_COLOR[4] = { 0.4f, 0.4f, 0.4f, 1.0f };
+    // const float BUTTON_ACTIVE_COLOR[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    // const float TEXT_COLOR[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    // const float WINDOW_BG_COLOR[4] = { 0.1f, 0.1f, 0.1f, 0.9f };
+    // const float TITLE_BG_COLOR[4] = { 0.0f, 0.4f, 0.8f, 1.0f };
 };

@@ -99,6 +99,7 @@ void UIRenderer::Initialize()
     uiRSDesc.FillMode = D3D11_FILL_SOLID;
     uiRSDesc.CullMode = D3D11_CULL_NONE;
     uiRSDesc.DepthClipEnable = true;
+    uiRSDesc.ScissorEnable = TRUE; // Enable scissor testing
     ThrowIfFailed(device->CreateRasterizerState(&uiRSDesc, &m_uiRS));
 
     D3D11_SAMPLER_DESC sampDesc = {};
@@ -127,6 +128,9 @@ void UIRenderer::EnableUIState()
     context->UpdateSubresource(m_uiConstantBuffer.Get(), 0, nullptr, &cbUI, 0, 0);
     context->VSSetConstantBuffers(0, 1, m_uiConstantBuffer.GetAddressOf());
     
+    // Default to full screen scissor
+    SetScissorRect(0, 0, static_cast<float>(m_graphics->GetScreenWidth()), static_cast<float>(m_graphics->GetScreenHeight()));
+
     BeginBatch();
 }
 
@@ -143,6 +147,34 @@ void UIRenderer::BeginBatch()
 {
     m_currentBatch.vertices.clear();
     m_currentBatch.texture = nullptr;
+}
+
+void UIRenderer::SetScissorRect(float x, float y, float width, float height)
+{
+    Flush(); // Flush current batch before changing scissor state
+
+    auto context = m_graphics->GetContext();
+    
+    if (width <= 0 || height <= 0)
+    {
+        // "Disable" scissor by setting it to the full screen
+        D3D11_RECT rect;
+        rect.left = 0;
+        rect.top = 0;
+        rect.right = static_cast<LONG>(m_graphics->GetScreenWidth());
+        rect.bottom = static_cast<LONG>(m_graphics->GetScreenHeight());
+        context->RSSetScissorRects(1, &rect);
+    }
+    else
+    {
+        D3D11_RECT rect;
+        rect.left = static_cast<LONG>(x);
+        rect.top = static_cast<LONG>(y);
+        rect.right = static_cast<LONG>(x + width);
+        rect.bottom = static_cast<LONG>(y + height);
+        
+        context->RSSetScissorRects(1, &rect);
+    }
 }
 
 void UIRenderer::Flush()

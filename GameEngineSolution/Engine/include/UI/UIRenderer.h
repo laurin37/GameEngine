@@ -45,6 +45,7 @@ public:
     // Batch Rendering
     void BeginBatch();
     void Flush();
+    void SetScissorRect(float x, float y, float width, float height);
 
 private:
     void Initialize();
