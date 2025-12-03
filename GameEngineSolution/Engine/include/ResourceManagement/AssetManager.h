@@ -29,6 +29,7 @@ public:
     std::shared_ptr<Mesh> GetMesh(const std::string& filePath);
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture(const std::wstring& filePath);
     std::shared_ptr<Mesh> GetDebugCube();
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetWhiteTexture();
 
 private:
     Graphics* m_graphics; // Raw pointer, lifetime managed by Game class

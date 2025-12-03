@@ -108,3 +108,40 @@ std::shared_ptr<Mesh> AssetManager::GetDebugCube()
     m_meshes[debugCubeKey] = mesh;
     return mesh;
 }
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::GetWhiteTexture()
+{
+    const std::wstring whiteTexKey = L"__white_texture__";
+    
+    auto it = m_textures.find(whiteTexKey);
+    if (it != m_textures.end())
+    {
+        return it->second;
+    }
+
+    // Create a 1x1 white texture
+    uint32_t whitePixel = 0xFFFFFFFF;
+    
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = 1;
+    desc.Height = 1;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = &whitePixel;
+    initData.SysMemPitch = sizeof(uint32_t);
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    ThrowIfFailed(m_graphics->GetDevice()->CreateTexture2D(&desc, &initData, &texture));
+
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+    ThrowIfFailed(m_graphics->GetDevice()->CreateShaderResourceView(texture.Get(), nullptr, &srv));
+
+    m_textures[whiteTexKey] = srv;
+    return srv;
+}

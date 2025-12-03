@@ -1,10 +1,28 @@
 #include "../../../include/ECS/Systems/InputSystem.h"
 #include "../../../include/ECS/Components.h"
+#include "../../../include/Events/InputEvents.h"
+#include "../../../include/Events/EventBus.h"
 
 namespace ECS {
 
 void InputSystem::Init() {
-    // Nothing to init for now
+    if (m_eventBus) {
+        // Subscribe to Mouse Button Pressed
+        m_eventBus->Subscribe(EventType::MouseButtonPressed, [this](Event& e) {
+            MouseButtonPressedEvent& event = static_cast<MouseButtonPressedEvent&>(e);
+            if (event.GetMouseButton() == VK_RBUTTON) {
+                m_input.SetMouseLock(true);
+            }
+        });
+
+        // Subscribe to Mouse Button Released
+        m_eventBus->Subscribe(EventType::MouseButtonReleased, [this](Event& e) {
+            MouseButtonReleasedEvent& event = static_cast<MouseButtonReleasedEvent&>(e);
+            if (event.GetMouseButton() == VK_RBUTTON) {
+                m_input.SetMouseLock(false);
+            }
+        });
+    }
 }
 
 void InputSystem::Update(float deltaTime) {

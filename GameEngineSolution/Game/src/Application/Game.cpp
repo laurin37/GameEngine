@@ -39,6 +39,9 @@ bool Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         m_renderer->Initialize(&m_graphics, m_assetManager.get(), WINDOW_WIDTH, WINDOW_HEIGHT);
         m_uiRenderer = std::make_unique<UIRenderer>(&m_graphics);
 
+        m_gui = std::make_unique<ImmediateGUI>(m_uiRenderer.get(), &m_input, m_assetManager.get());
+        m_gui->Initialize();
+
         m_scene = std::make_unique<Scene>(m_assetManager.get(), &m_graphics, &m_input, &m_eventBus);
         m_scene->Load();
         
@@ -93,6 +96,34 @@ void Game::Render()
     if (m_scene)
     {
         m_scene->Render(m_renderer.get(), m_uiRenderer.get(), m_showDebugCollision);
+        
+        // Render Immediate GUI
+        m_uiRenderer->EnableUIState();
+        m_gui->BeginFrame();
+        
+        // Set font for GUI (using the one from Scene if available, or just rely on what UIRenderer has)
+        // Ideally we should get the font from AssetManager or Scene
+        if (m_scene && m_scene->GetDebugFont()) {
+             m_gui->SetFont(m_scene->GetDebugFont());
+        }
+        
+        // Demo Window
+        m_gui->Begin("Debug Controls", 10, 10, 200, 150);
+        
+        if (m_gui->Button("Toggle Bloom")) {
+             m_renderer->GetPostProcess()->ToggleBloom();
+        }
+        
+        if (m_gui->Button("Toggle Physics Dbg")) {
+            m_showDebugCollision = !m_showDebugCollision;
+        }
+        
+        m_gui->Label("FPS: " + std::to_string(1.0f / 0.016f)); // Placeholder FPS
+        
+        m_gui->End();
+        
+        m_gui->EndFrame();
+        m_uiRenderer->DisableUIState();
     }
 
     m_graphics.Present();

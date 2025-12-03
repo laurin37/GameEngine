@@ -43,10 +43,16 @@ public:
 
     int GetMouseDeltaX() const;
     int GetMouseDeltaY() const;
+    int GetMouseX() const;
+    int GetMouseY() const;
+
+    void SetMouseLock(bool locked);
+    bool IsMouseLocked() const { return m_isMouseLocked; }
 
 private:
     HWND m_hwnd;
     bool m_keys[256];
+    bool m_isMouseLocked = false;
     MouseState m_mouseState;
     std::unordered_map<Action, int> m_actionBindings;
     std::function<void(Event&)> m_EventCallback;

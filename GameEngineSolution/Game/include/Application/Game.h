@@ -11,6 +11,7 @@
 #include "UI/UIRenderer.h"
 #include "Application/Scene.h"
 #include "Events/EventBus.h"
+#include "UI/ImmediateGUI.h"
 
 class AssetManager; // Forward Declaration
 
@@ -37,6 +38,7 @@ private:
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<AssetManager> m_assetManager;
     std::unique_ptr<UIRenderer> m_uiRenderer;
+    std::unique_ptr<ImmediateGUI> m_gui;
 
     // Scene
     std::unique_ptr<Scene> m_scene;

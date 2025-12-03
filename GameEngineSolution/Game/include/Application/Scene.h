@@ -65,6 +65,7 @@ public:
     // Debug UI
     void ToggleDebugUI() { m_debugUI.Toggle(); }
     bool IsDebugUIEnabled() const { return m_debugUI.IsEnabled(); }
+    const SimpleFont* GetDebugFont() const { return &m_font; }
 
 private:
     // Render helpers
